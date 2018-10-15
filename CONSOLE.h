@@ -22,6 +22,9 @@ public:
 	static volatile uint8_t kbd_chars;				//received chars number
 
 	static char mon_buffer[MON_BUFFER_SIZE + 1];
+	static char inChar;
+
+	static int mon_ptr;
 
 	static boolean MON;
 
@@ -48,11 +51,11 @@ public:
 	static void welcome();
 
 	static void write(uint8_t n);
-	static void print(String s);
-	static void println(String s);
-	static void block(String s);
-	static void blockln(String s);
-	static void lnblockln(String s);
+	static void print(String s = "");
+	static void println(String s = "");
+	static void block(String s = "");
+	static void blockln(String s = "");
+	static void lnblockln(String s = "");
 	static void ok();
 	static void skip();
 	static void error();

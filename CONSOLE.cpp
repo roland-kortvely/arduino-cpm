@@ -11,6 +11,9 @@
 volatile uint8_t CONSOLE::kbd_chars = 0;
 
 char CONSOLE::mon_buffer[MON_BUFFER_SIZE + 1];
+char CONSOLE::inChar;
+
+int CONSOLE::mon_ptr = 0;
 
 boolean CONSOLE::MON = true;
 
@@ -116,23 +119,23 @@ void CONSOLE::write(uint8_t n) {
 	Serial.write(n);
 }
 
-void CONSOLE::print(String s) {
+void CONSOLE::print(String s = "") {
 	Serial.print(s);
 }
 
-void CONSOLE::println(String s) {
+void CONSOLE::println(String s = "") {
 	Serial.println(s);
 }
 
-void CONSOLE::block(String s) {
+void CONSOLE::block(String s = "") {
 	Serial.print(s);
 }
 
-void CONSOLE::blockln(String s) {
+void CONSOLE::blockln(String s = "") {
 	Serial.println(s + "\n");
 }
 
-void CONSOLE::lnblockln(String s) {
+void CONSOLE::lnblockln(String s = "") {
 	Serial.println("\n" + s + "\n");
 }
 

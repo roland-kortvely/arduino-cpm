@@ -95,4 +95,55 @@ void I8080::init()
 
 void I8080::boot() {
 
+	uint32_t adr;
+	uint8_t port;
+	uint8_t dat;
+	boolean _EOF;
+	boolean error;
+	uint8_t hex_count;
+	uint8_t hex_len;
+	uint8_t hex_type;
+	uint8_t hex_crc;
+	uint8_t hex_bytes;
+	uint16_t len;
+	uint16_t count;
+	uint8_t crc;
+	uint8_t tmp_byte;
+	uint16_t tmp_word;
+
+	while (true) {
+		do
+		{
+			CONSOLE::inChar = '\0';
+			if (CONSOLE::con_ready()) {
+				CONSOLE::inChar = CONSOLE::con_read();
+				//Serial.print(uint8_t(inChar),HEX);
+				CONSOLE::inChar = CONSOLE::upCase(CONSOLE::inChar);
+				if (uint8_t(CONSOLE::inChar) == BS_KEY) {
+					//backspace
+					if (CONSOLE::mon_ptr > 0) {
+						CONSOLE::mon_ptr--;
+						CONSOLE::mon_buffer[CONSOLE::mon_ptr] = '\0';
+						CONSOLE::write(CONSOLE::inChar);
+						CONSOLE::print(" ");
+						CONSOLE::write(CONSOLE::inChar);
+					}
+				}
+				else {
+					CONSOLE::mon_buffer[CONSOLE::mon_ptr] = CONSOLE::inChar;
+					CONSOLE::mon_ptr++;
+					CONSOLE::write(CONSOLE::inChar);
+				}
+			}
+		} while ((CONSOLE::inChar != '\r') && (CONSOLE::inChar != '\n') && (CONSOLE::mon_ptr < MON_BUFFER_SIZE));
+
+		CONSOLE::println();
+		CONSOLE::mon_ptr = 0;
+
+		//TODO::execute
+
+		CONSOLE::xy(MON_Y, 0);
+		CONSOLE::print(">");
+		CONSOLE::clrend();
+	}
 }

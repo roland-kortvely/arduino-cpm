@@ -17,6 +17,9 @@ class MEM
 {
 public:
 
+	static volatile uint8_t  _DB;	//data bus buffer
+	static volatile uint16_t _AB;	//data bus buffer
+
 	static int EEPROM_SIZE;
 	static int EEPROM_DRIVES;
 	static int EEPROM_SENSE_SW;
@@ -35,6 +38,17 @@ public:
 	static uint8_t MMU_MAP[MMU_BLOCKS_NUM];//memory banking map
 
 	static void init();
+
+	static void bank_set(uint8_t block, uint8_t bank);
+	static uint8_t bank_get(uint8_t block);
+
+	static void _RD();
+	static void _WR();
+
+	static uint8_t _get(uint16_t adr);
+	static void _set(uint16_t adr, uint8_t dat);
+
+	static uint32_t MEM_TEST(boolean brk);
 };
 
 #endif

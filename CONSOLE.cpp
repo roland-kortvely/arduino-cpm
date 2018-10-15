@@ -10,6 +10,10 @@
 
 volatile uint8_t CONSOLE::kbd_chars = 0;
 
+char CONSOLE::mon_buffer[MON_BUFFER_SIZE + 1];
+
+boolean CONSOLE::MON = true;
+
 void CONSOLE::clrscr()
 {
 	Serial.write(27);
@@ -106,12 +110,19 @@ void CONSOLE::welcome() {
 	Serial.println(F("***************************************"));
 	Serial.println(F("*      (C) 2018 Roland Kortvely       *"));
 	Serial.println(F("***************************************"));
-	Serial.println("");
 }
 
 
 void CONSOLE::block(String name) {
 	Serial.print(name);
+}
+
+void CONSOLE::blockln(String name) {
+	Serial.println(name + "\n");
+}
+
+void CONSOLE::lnblockln(String name) {
+	Serial.println("\n" + name + "\n");
 }
 
 void CONSOLE::ok() {
@@ -125,7 +136,119 @@ void CONSOLE::skip() {
 }
 
 void CONSOLE::error() {
+
+	CONSOLE::color(1);
+
 	Serial.print(F("\t"));
 	Serial.println(F("ERROR!"));
-	while(1) {}
+	while(1) {}								//TODO: RESTART
+}
+
+boolean CONSOLE::con_ready() {
+	boolean res;
+	switch (CON_IN) {
+	case 0: //terminal
+		if (Serial.available() > 0) {
+			res = true;
+		}
+		else {
+			res = false;
+		}
+		break;
+	case 1: //PS/2 keyboard
+			//cli();
+		if (kbd_chars > 0) {
+			res = true;
+		}
+		else {
+			res = false;
+		}
+		//sei();
+		break;
+	}
+	return res;
+}
+
+//console input/output procedures
+char CONSOLE::con_read() {
+	char key;
+	key = '\0';
+	switch (CON_IN) {
+	case 0: //terminal
+		if (Serial.available() > 0) {
+			key = Serial.read();
+			if (!MON && ((uint8_t)key == CTRL_SLASH_KEY)) {
+				CONFIG::exitFlag = true;
+			}
+		}
+		break;
+	case 1: //PS/2 keyboard
+	  //
+		break;
+	}
+	return key;
+}
+
+//conversion functions
+int CONSOLE::str2hex(String s)
+{
+	int x = 0;
+	for (int i = 0; i < s.length(); i++) {
+		char c = s.charAt(i);
+		if (c >= '0' && c <= '9') {
+			x *= 16;
+			x += c - '0';
+		}
+		else if (c >= 'A' && c <= 'F') {
+			x *= 16;
+			x += (c - 'A') + 10;
+		}
+		else break;
+	}
+	return x;
+}
+
+uint8_t CONSOLE::chr2hex(char c)
+{
+	uint8_t x = 0;
+	if (c >= '0' && c <= '9') {
+		x *= 16;
+		x += c - '0';
+	}
+	else if (c >= 'A' && c <= 'F') {
+		x *= 16;
+		x += (c - 'A') + 10;
+	}
+	return x;
+}
+
+boolean CONSOLE::hexcheck(uint8_t start, uint8_t len) {
+
+	boolean ok = true;
+	for (uint8_t i = start; i < (start + len); i++) {
+		if (!(((CONSOLE::mon_buffer[i] >= '0') && (CONSOLE::mon_buffer[i] <= '9')) || ((CONSOLE::mon_buffer[i] >= 'A') && (CONSOLE::mon_buffer[i] <= 'F')))) {
+			ok = false;
+		}
+	}
+	return ok;
+}
+
+//keyboard input to numbers
+uint8_t CONSOLE::kbd2nibble(uint8_t start) {
+	return CONSOLE::chr2hex(CONSOLE::mon_buffer[start]);
+}
+
+uint8_t CONSOLE::kbd2byte(uint8_t start) {
+	return CONSOLE::chr2hex(CONSOLE::mon_buffer[start]) * 16 + CONSOLE::chr2hex(CONSOLE::mon_buffer[start + 1]);
+}
+
+uint16_t CONSOLE::kbd2word(uint8_t start) {
+	return (uint16_t)(CONSOLE::chr2hex(CONSOLE::mon_buffer[start]) * 16 * 16 * 16) + (uint16_t)(CONSOLE::chr2hex(CONSOLE::mon_buffer[start + 1]) * 16 * 16) + (uint16_t)(CONSOLE::chr2hex(CONSOLE::mon_buffer[start + 2]) * 16) + (uint16_t)(CONSOLE::chr2hex(CONSOLE::mon_buffer[start + 3]));
+}
+
+char CONSOLE::upCase(char symbol) {
+	if (symbol >= 97 && symbol <= 122) {
+		symbol = char(uint8_t(symbol) - 32);
+	}
+	return symbol;
 }

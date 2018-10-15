@@ -102,11 +102,28 @@ constexpr auto MON_Y = 15;
 constexpr auto CON_IN = 0;				// 0 - console | 1 - PS2
 constexpr auto KBD_BUFFER_SIZE = 16;	//console input buffer size
 
+constexpr auto BS_KEY = 0x08;
+constexpr auto DEL_KEY = 0x7F;
+constexpr auto CTRL_Q_KEY = 0x11;
+constexpr auto CTRL_C_KEY = 0x03;
+constexpr auto CTRL_Z_KEY = 0x1A;
+constexpr auto CTRL_O_KEY = 0x0F;
+constexpr auto CTRL_X_KEY = 0x18;
+constexpr auto CTRL_SLASH_KEY = 0x1F;
+
+constexpr auto MON_BUFFER_SIZE = 32;	//monitor input buffer size
+
 class CONFIG
 {
 public:
 	static uint8_t SENSE_SW;
+
 	static boolean BIOS_INT; //BIOS Intercept flag
+
+	static uint32_t RAM_AVAIL;
+
+	static bool exitFlag;
+
 	static void init();
 };
 

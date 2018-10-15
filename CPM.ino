@@ -8,8 +8,6 @@
 void setup()
 {
 	IPL::init();
-
-	Serial.println("SETUP END");
 }
 
 void loop()

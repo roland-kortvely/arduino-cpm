@@ -21,6 +21,10 @@ public:
 	static volatile char kbd_buffer[KBD_BUFFER_SIZE];	//console input buffer
 	static volatile uint8_t kbd_chars;				//received chars number
 
+	static char mon_buffer[MON_BUFFER_SIZE + 1];
+
+	static boolean MON;
+
 	static void clrscr();
 	static void clrlin();
 	static void clrend();
@@ -44,6 +48,8 @@ public:
 	static void welcome();
 
 	static void block(String name);
+	static void blockln(String name);
+	static void lnblockln(String name);
 	static void ok();
 	static void skip();
 	static void error();

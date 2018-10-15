@@ -107,22 +107,33 @@ void CONSOLE::welcome() {
 
 	CONSOLE::color(2);
 
-	Serial.println(F("***************************************"));
-	Serial.println(F("*      (C) 2018 Roland Kortvely       *"));
-	Serial.println(F("***************************************"));
+	CONSOLE::println(F("***************************************"));
+	CONSOLE::println(F("*      (C) 2018 Roland Kortvely       *"));
+	CONSOLE::println(F("***************************************"));
 }
 
-
-void CONSOLE::block(String name) {
-	Serial.print(name);
+void CONSOLE::write(uint8_t n) {
+	Serial.write(n);
 }
 
-void CONSOLE::blockln(String name) {
-	Serial.println(name + "\n");
+void CONSOLE::print(String s) {
+	Serial.print(s);
 }
 
-void CONSOLE::lnblockln(String name) {
-	Serial.println("\n" + name + "\n");
+void CONSOLE::println(String s) {
+	Serial.println(s);
+}
+
+void CONSOLE::block(String s) {
+	Serial.print(s);
+}
+
+void CONSOLE::blockln(String s) {
+	Serial.println(s + "\n");
+}
+
+void CONSOLE::lnblockln(String s) {
+	Serial.println("\n" + s + "\n");
 }
 
 void CONSOLE::ok() {

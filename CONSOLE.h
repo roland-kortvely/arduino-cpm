@@ -47,9 +47,12 @@ public:
 
 	static void welcome();
 
-	static void block(String name);
-	static void blockln(String name);
-	static void lnblockln(String name);
+	static void write(uint8_t n);
+	static void print(String s);
+	static void println(String s);
+	static void block(String s);
+	static void blockln(String s);
+	static void lnblockln(String s);
 	static void ok();
 	static void skip();
 	static void error();

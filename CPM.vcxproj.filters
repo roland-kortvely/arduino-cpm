@@ -51,6 +51,12 @@
     <ClInclude Include="FDD.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SD.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="i8080.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="IPL.cpp">
@@ -72,6 +78,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="FDD.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SD.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="i8080.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

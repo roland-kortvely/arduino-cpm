@@ -279,7 +279,7 @@ uint32_t MEM::MEM_TEST(boolean brk) {
 		MEM::_DB = pgm_read_byte_near(memtest_table + j);
 		MEM::_WR();
 		if ((i % 8192) == 0) {
-			Serial.print(".");
+			CONSOLE::print(".");
 		}
 		j++;
 		if (j == MEMTEST_TABLE_SIZE) {
@@ -295,7 +295,7 @@ uint32_t MEM::MEM_TEST(boolean brk) {
 	j = 0;
 	for (i = 0; i <= 0xFFFF; i++) {
 		if ((i % 8192) == 0) {
-			Serial.print(".");
+			CONSOLE::print(".");
 		}
 		MEM::_AB = i;
 		MEM::_RD();
@@ -321,7 +321,7 @@ uint32_t MEM::MEM_TEST(boolean brk) {
 		MEM::_DB = uint8_t(~(pgm_read_byte_near(memtest_table + j)));
 		MEM::_WR();
 		if ((i % 8192) == 0) {
-			Serial.print(".");
+			CONSOLE::print(".");
 		}
 		j++;
 		if (j == MEMTEST_TABLE_SIZE) {
@@ -337,7 +337,7 @@ uint32_t MEM::MEM_TEST(boolean brk) {
 	j = 0;
 	for (i = 0; i <= 0xFFFF; i++) {
 		if ((i % 8192) == 0) {
-			Serial.print(".");
+			CONSOLE::print(".");
 		}
 		MEM::_AB = i;
 		MEM::_RD();

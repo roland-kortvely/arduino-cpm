@@ -114,6 +114,7 @@
     <ClInclude Include="CONSOLE.h" />
     <ClInclude Include="EEPROM.h" />
     <ClInclude Include="FDD.h" />
+    <ClInclude Include="i8080.h" />
     <ClInclude Include="IO.h" />
     <ClInclude Include="IPL.h" />
     <ClInclude Include="MEM.h" />
@@ -125,6 +126,7 @@
     <ClCompile Include="CONFIG.cpp" />
     <ClCompile Include="CONSOLE.cpp" />
     <ClCompile Include="FDD.cpp" />
+    <ClCompile Include="i8080.cpp" />
     <ClCompile Include="IO.cpp" />
     <ClCompile Include="IPL.cpp" />
     <ClCompile Include="MEM.cpp" />

@@ -83,7 +83,7 @@ void SD::MEM_TEST() {
 
 	for (uint8_t bank = 0; bank < CHECKED_BANKS; bank++) {
 
-		Serial.print(F("BANK "));
+		CONSOLE::print(F("BANK "));
 		Serial.print(bank, HEX);
 
 		for (uint8_t block = 0; block < MMU_BLOCKS_NUM; block++) {
@@ -93,7 +93,7 @@ void SD::MEM_TEST() {
 		CONFIG::RAM_AVAIL = MEM::MEM_TEST(true);
 
 		Serial.print(CONFIG::RAM_AVAIL / 1024, DEC);
-		Serial.println("K");
+		CONSOLE::println("K");
 
 		if (CONFIG::RAM_AVAIL != 0x10000) {
 			CONSOLE::error();
@@ -106,7 +106,7 @@ void SD::MEM_TEST() {
 	}
 
 	Serial.print(CONFIG::RAM_AVAIL, DEC);
-	Serial.print(" X ");
+	CONSOLE::print(" X ");
 	Serial.print(MMU_BANKS_NUM, DEC);
 	CONSOLE::blockln(F(" BYTE(S) OF RAM ARE AVAILABLE"));
 

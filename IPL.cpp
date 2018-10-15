@@ -22,7 +22,7 @@ void IPL::init()
 	SD::init();
 	FDD::init();
 
-	SD::MEM_TEST();
+	//SD::MEM_TEST();
 
 	CONSOLE::lnblockln("IPL DONE");
 }

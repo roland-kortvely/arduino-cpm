@@ -4,6 +4,7 @@
 
 
 #include "IO.h"
+#include "CONSOLE.h"
 
 volatile bool IO::exitFlag = false;
 
@@ -26,10 +27,14 @@ uint8_t IO::SENSE_SW_PORT = 0xFF;
 
 void IO::init()
 {
+
+	CONSOLE::block("IO::init");
+
 	pinMode(IO::LED_pin, OUTPUT);
 	digitalWrite(IO::LED_pin, LOW);
 	pinMode(IO::IN_pin, INPUT);
 	pinMode(IO::OUT_pin, OUTPUT);
 	digitalWrite(IO::OUT_pin, LOW);
-}
 
+	CONSOLE::ok();
+}

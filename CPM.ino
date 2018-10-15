@@ -3,16 +3,13 @@
  */
 
 
-#include "CONFIG.h"
-#include "CONSOLE.h"
-#include "IO.h"
 #include "IPL.h"
 
 void setup()
 {
-	CONFIG::init();
-	IO::init();
 	IPL::init();
+
+	Serial.println("SETUP END");
 }
 
 void loop()

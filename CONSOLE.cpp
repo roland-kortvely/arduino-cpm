@@ -91,7 +91,7 @@ void CONSOLE::xy(uint8_t row, uint8_t col) {
 void CONSOLE::con_flush() {
 	switch (CON_IN) {
 	case 0: //terminal
-		Serial.flush();
+		//Serial.flush();
 		break;
 	case 1: //PS2
 		CONSOLE::kbd_chars = 0;
@@ -100,10 +100,32 @@ void CONSOLE::con_flush() {
 }
 
 void CONSOLE::welcome() {
+
 	CONSOLE::color(2);
 
 	Serial.println(F("***************************************"));
 	Serial.println(F("*      (C) 2018 Roland Kortvely       *"));
 	Serial.println(F("***************************************"));
 	Serial.println("");
+}
+
+
+void CONSOLE::block(String name) {
+	Serial.print(name);
+}
+
+void CONSOLE::ok() {
+	Serial.print(F("\t"));
+	Serial.println(F("OK"));
+}
+
+void CONSOLE::skip() {
+	Serial.print(F("\t"));
+	Serial.println(F("SKIP"));
+}
+
+void CONSOLE::error() {
+	Serial.print(F("\t"));
+	Serial.println(F("ERROR!"));
+	while(1) {}
 }

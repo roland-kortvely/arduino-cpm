@@ -117,6 +117,7 @@
     <ClInclude Include="IO.h" />
     <ClInclude Include="IPL.h" />
     <ClInclude Include="MEM.h" />
+    <ClInclude Include="SD.h" />
     <ClInclude Include="__vm\.CPM.vsarduino.h" />
   </ItemGroup>
   <ItemGroup>
@@ -127,6 +128,7 @@
     <ClCompile Include="IO.cpp" />
     <ClCompile Include="IPL.cpp" />
     <ClCompile Include="MEM.cpp" />
+    <ClCompile Include="SD.cpp" />
   </ItemGroup>
   <PropertyGroup>
     <DebuggerFlavor>VisualMicroDebugger</DebuggerFlavor>

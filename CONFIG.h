@@ -15,6 +15,9 @@
  //BOOT area
 #define SEC_BUF 0x80 //sector buffer
 
+constexpr auto SS_SD_pin = 10;								//SS pin (D10)
+constexpr auto SD_BLK_SIZE = 128;							//SD block size
+
 constexpr auto FDD_NUM = 4;
 constexpr auto SD_DISKS_OFFSET = 0x0001000;
 constexpr auto SD_DISK_SIZE = 0x0001000;

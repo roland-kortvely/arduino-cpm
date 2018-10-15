@@ -4,6 +4,7 @@
 
 
 #include "CONFIG.h"
+#include "CONSOLE.h"
 #include "IO.h"
 
 boolean CONFIG::BIOS_INT; //BIOS Intercept flag
@@ -14,4 +15,8 @@ void CONFIG::init()
 	Serial.begin(COM_BAUD);
 	while (!Serial) {}
 	delay(1000);
+
+	CONSOLE::clrscr();
+	
+	CONSOLE::welcome();
 }

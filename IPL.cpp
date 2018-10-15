@@ -5,29 +5,33 @@
 
 #include "IPL.h"
 #include "CONSOLE.h"
+#include "IO.h"
 #include "MEM.h"
+#include "SD.h";
 #include "FDD.h"
 
 void IPL::init()
 {
 
-	uint8_t k;
+	CONFIG::init();
+
+	Serial.println(F("INITIAL PROGRAM LOAD (IPL)\n"));
+
 	uint8_t res;
 	uint8_t LRC;
 	uint8_t bank;
 	uint8_t block;
 	uint8_t CHECKED_BANKS;
-	uint16_t j;
 	uint32_t blk;
 	uint32_t blk_end;
 	uint32_t start_time;
-	uint32_t i;
 	uint32_t _cardsize;
 
 	bool RAMTestPass = true;
 
-	CONSOLE::clrscr();
+	IO::init();
 
+	/*
 	cli();
 
 	//Timer
@@ -40,11 +44,11 @@ void IPL::init()
 	TIMSK1 |= (1 << OCIE1A);
 
 	sei();
-
-	CONSOLE::welcome();
+	*/
 
 	MEM::init();
+	SD::init();
 	FDD::init();
 
-	CONSOLE::con_flush();
+	Serial.println("IPL DONE");
 }

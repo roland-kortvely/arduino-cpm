@@ -42,6 +42,11 @@ public:
 	static char upCase(char symbol);
 
 	static void welcome();
+
+	static void block(String name);
+	static void ok();
+	static void skip();
+	static void error();
 };
 
 #endif

@@ -11,6 +11,12 @@
 
 uint32_t FDD::SD_FDD_OFFSET[FDD_NUM];
 
+uint8_t  FDD::FDD_REG_SEC = 1;			//sector register
+uint8_t  FDD::FDD_REG_TRK = 0;			//track register
+uint8_t  FDD::FDD_REG_DRV = 0;			//drive register
+boolean  FDD::FDD_REG_STATUS = false;	//true - O.K., false - ERROR
+uint16_t FDD::FDD_REG_DMA = 0;			//DMA address register
+
 void FDD::init()
 {
 	CONSOLE::block("FDD::init");

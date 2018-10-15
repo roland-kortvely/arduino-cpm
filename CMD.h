@@ -3,8 +3,8 @@
  */
 
 
-#ifndef _IPL_h
-#define _IPL_h
+#ifndef _CMD_h
+#define _CMD_h
 
 #if defined(ARDUINO) && ARDUINO >= 100
 	#include "arduino.h"
@@ -12,11 +12,15 @@
 	#include "WProgram.h"
 #endif
 
-class IPL
+class CMD
 {
+private:
+	static void format();
+	static void status();
+	static void BIOS();
+	static void MEM_TEST();
  public:
-	static void init();
-	static void call(word addr);
+	static void exec();
 };
 
 #endif

@@ -149,12 +149,12 @@ void CONSOLE::skip() {
 	Serial.println(F("SKIP"));
 }
 
-void CONSOLE::error() {
+void CONSOLE::error(String s = "ERROR!") {
 
 	CONSOLE::color(1);
 
 	Serial.print(F("\t"));
-	Serial.println(F("ERROR!"));
+	Serial.println(s);
 	while(1) {}								//TODO: RESTART
 }
 

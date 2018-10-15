@@ -7,9 +7,12 @@
 #include "CONSOLE.h"
 #include "IO.h"
 
-boolean CONFIG::BIOS_INT; //BIOS Intercept flag
+boolean CONFIG::BIOS_INT;					//BIOS Intercept flag
+
 uint8_t CONFIG::SENSE_SW = 0x00;
+
 uint32_t CONFIG::RAM_AVAIL = 0x10000L;
+
 bool CONFIG::exitFlag = false;
 
 void CONFIG::init()

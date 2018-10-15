@@ -16,9 +16,6 @@ class IO
 {
 public:
 
-	static volatile uint8_t  _DB; //data bus buffer
-	static volatile uint16_t _AB; //data bus buffer
-
 	static volatile bool exitFlag;
 
 	static uint32_t RAM_AVAIL;
@@ -26,19 +23,16 @@ public:
 	//AUX
 	static bool LED_on;
 	static uint8_t LED_count;
-	static uint8_t LED_delay;
-	static uint8_t LED_pin;		
-	static uint8_t IN_pin;		
-	static uint8_t OUT_pin;	
-	static uint8_t IN_PORT;		
-	static uint8_t OUT_PORT;	
 
 	//Other
 	static uint8_t SENSE_SW;
-	static uint8_t SENSE_SW_PORT;
-
 
 	static void init();
+
+	static void _INPORT();
+	static void _OUTPORT();
+	static uint8_t _getPORT(uint16_t adr);
+	static void _setPORT(uint16_t adr, uint8_t dat);
 };
 
 #endif

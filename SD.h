@@ -24,8 +24,6 @@ public:
 
 	static void init();
 
-	static void MEM_TEST();
-
 	static uint8_t readSD(uint32_t blk, uint16_t offset);
 	static uint8_t writeSD(uint32_t blk);
 	static uint8_t eraseSD(uint32_t blk, uint32_t len);

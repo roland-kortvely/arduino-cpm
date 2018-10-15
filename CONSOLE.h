@@ -58,7 +58,7 @@ public:
 	static void lnblockln(String s = "");
 	static void ok();
 	static void skip();
-	static void error();
+	static void error(String s = "ERROR!");
 };
 
 #endif

@@ -43,19 +43,17 @@ void IPL::call(word addr)
 	{
 		MEM::_AB = I8080::_PC;
 
-		if (CONFIG::exitFlag) { break; } //go to monitor
-
+		if (CONFIG::exitFlag) { break; }							//go to monitor
 
 		if (BIOS::INT()) {
 			break;
 		}
 
-		MEM::_RD();//(AB) -> INSTR  instruction fetch
+		MEM::_RD();													//(AB) -> INSTR  instruction fetch
 		I8080::_IR = MEM::_DB;
 
-		//#include "debug.h" 
+		((EXEC)pgm_read_word(&MAP_ARR[I8080::_IR])) ();				//decode
 
-		((CmdFunction)pgm_read_word(&doCmdArray[I8080::_IR])) (); //decode
 	} while (true);
 
 	if (MEM::MEM_ERR) {

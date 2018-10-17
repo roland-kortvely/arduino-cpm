@@ -205,21 +205,16 @@ void I8080::pc2sp() {
 	MEM::_set(_SP + 1, highByte(_PC));
 }
 
-void I8080::_I8080_() {
+//NOP
+void I8080::_() {
 	_PC++;
 }
 
-void I8080::_I8080_HLT() {
+void I8080::_HLT() {
 	CONFIG::exitFlag = true;
 }
 
-//NOP
-void I8080::_I8080_NOP() {
-	_PC++;
-}
-
-
-void I8080::_I8080_MOV(uint8_t DDD, uint8_t SSS) {
+void I8080::_MOV(uint8_t DDD, uint8_t SSS) {
 	if (DDD == _Reg_M)
 	{
 		_TMP = _Regs[SSS];
@@ -245,7 +240,7 @@ void I8080::_I8080_MOV(uint8_t DDD, uint8_t SSS) {
 }
 
 //MVI
-void I8080::_I8080_MVI(uint8_t DDD) {
+void I8080::_MVI(uint8_t DDD) {
 	_PC++;
 	MEM::_AB = _PC;
 	if (DDD != _Reg_M)
@@ -266,7 +261,7 @@ void I8080::_I8080_MVI(uint8_t DDD) {
 
 
 //LXI
-void I8080::_I8080_LXI(uint8_t rp) {
+void I8080::_LXI(uint8_t rp) {
 	_PC++;
 	MEM::_AB = _PC;
 	MEM::_RD();
@@ -305,7 +300,7 @@ void I8080::_I8080_LXI(uint8_t rp) {
 }
 
 //LDA
-void I8080::_I8080_LDA() {
+void I8080::_LDA() {
 	_PC++;
 	MEM::_AB = _PC;
 	MEM::_RD();
@@ -321,7 +316,7 @@ void I8080::_I8080_LDA() {
 }
 
 //STA
-void I8080::_I8080_STA() {
+void I8080::_STA() {
 	_PC++;
 	MEM::_AB = _PC;
 	MEM::_RD();
@@ -338,7 +333,7 @@ void I8080::_I8080_STA() {
 
 
 //LHLD
-void I8080::_I8080_LHLD()
+void I8080::_LHLD()
 {
 	_PC++;
 	MEM::_AB = _PC;
@@ -362,7 +357,7 @@ void I8080::_I8080_LHLD()
 }
 
 //SHLD
-void I8080::_I8080_SHLD() {
+void I8080::_SHLD() {
 	_PC++;
 	MEM::_AB = _PC;
 	MEM::_RD();
@@ -385,7 +380,7 @@ void I8080::_I8080_SHLD() {
 }
 
 //LDAX
-void I8080::_I8080_LDAX(uint8_t rp) {
+void I8080::_LDAX(uint8_t rp) {
 	switch (rp) {
 	case _RP_BC:
 		MEM::_AB = _rpBC;
@@ -400,7 +395,7 @@ void I8080::_I8080_LDAX(uint8_t rp) {
 }
 
 //STAX
-void I8080::_I8080_STAX(uint8_t rp) {
+void I8080::_STAX(uint8_t rp) {
 	switch (rp) {
 	case _RP_BC:
 		MEM::_AB = _rpBC;
@@ -415,7 +410,7 @@ void I8080::_I8080_STAX(uint8_t rp) {
 }
 
 //XCHG
-void I8080::_I8080_XCHG() {
+void I8080::_XCHG() {
 	_rD = _rD ^ _rH;
 	_rH = _rD ^ _rH;
 	_rD = _rD ^ _rH;
@@ -426,7 +421,7 @@ void I8080::_I8080_XCHG() {
 }
 
 //ADD
-void I8080::_I8080_ADD(uint8_t SSS) {
+void I8080::_ADD(uint8_t SSS) {
 	if (SSS != _Reg_M) {
 		_TMP = _Regs[SSS];
 		_ACT = _rA;
@@ -455,7 +450,7 @@ void I8080::_I8080_ADD(uint8_t SSS) {
 }
 
 //ADI
-void I8080::_I8080_ADI() {
+void I8080::_ADI() {
 	_PC++;
 	_ACT = _rA;
 	MEM::_AB = _PC;
@@ -480,7 +475,7 @@ void I8080::_I8080_ADI() {
 
 
 //ADC
-void I8080::_I8080_ADC(uint8_t SSS) {
+void I8080::_ADC(uint8_t SSS) {
 	if (SSS != _Reg_M) {
 		_TMP = _Regs[SSS];
 		_ACT = _rA;
@@ -510,7 +505,7 @@ void I8080::_I8080_ADC(uint8_t SSS) {
 }
 
 //ACI
-void I8080::_I8080_ACI() {
+void I8080::_ACI() {
 	_PC++;
 	_ACT = _rA;
 	MEM::_AB = _PC;
@@ -535,7 +530,7 @@ void I8080::_I8080_ACI() {
 }
 
 //SUB
-void I8080::_I8080_SUB(uint8_t SSS) {
+void I8080::_SUB(uint8_t SSS) {
 	if (SSS != _Reg_M) {
 		_TMP = _Regs[SSS];
 		_ACT = _rA;
@@ -566,7 +561,7 @@ void I8080::_I8080_SUB(uint8_t SSS) {
 }
 
 //SUI
-void I8080::_I8080_SUI() {
+void I8080::_SUI() {
 	_PC++;
 	_ACT = _rA;
 	MEM::_AB = _PC;
@@ -593,7 +588,7 @@ void I8080::_I8080_SUI() {
 }
 
 //SBB
-void I8080::_I8080_SBB(uint8_t SSS) {
+void I8080::_SBB(uint8_t SSS) {
 	if (SSS != _Reg_M) {
 		_TMP = _Regs[SSS];
 		_ACT = _rA;
@@ -624,7 +619,7 @@ void I8080::_I8080_SBB(uint8_t SSS) {
 	_PC++;
 }
 
-void I8080::_I8080_SBI() {
+void I8080::_SBI() {
 	_PC++;
 	_ACT = _rA;
 	MEM::_AB = _PC;
@@ -656,7 +651,7 @@ void I8080::_I8080_SBI() {
 //instructions.
 
 //INR
-void I8080::_I8080_INR(uint8_t DDD) {
+void I8080::_INR(uint8_t DDD) {
 	if (DDD == _Reg_M)
 	{
 		MEM::_AB = _rpHL;
@@ -688,7 +683,7 @@ void I8080::_I8080_INR(uint8_t DDD) {
 }
 
 //DCR
-void I8080::_I8080_DCR(uint8_t DDD) {
+void I8080::_DCR(uint8_t DDD) {
 	if (DDD == _Reg_M)
 	{
 		MEM::_AB = _rpHL;
@@ -720,7 +715,7 @@ void I8080::_I8080_DCR(uint8_t DDD) {
 }
 
 //INX
-void I8080::_I8080_INX(uint8_t rp) {
+void I8080::_INX(uint8_t rp) {
 	switch (rp) {
 	case _RP_BC:
 		_rC++;
@@ -748,7 +743,7 @@ void I8080::_I8080_INX(uint8_t rp) {
 }
 
 //DCX
-void I8080::_I8080_DCX(uint8_t rp) {
+void I8080::_DCX(uint8_t rp) {
 	switch (rp) {
 	case _RP_BC:
 		_rC--;
@@ -776,7 +771,7 @@ void I8080::_I8080_DCX(uint8_t rp) {
 }
 
 //DAD
-void I8080::_I8080_DAD(uint8_t rp) {
+void I8080::_DAD(uint8_t rp) {
 	uint16_t d16_1;
 	uint16_t d16_2;
 	uint16_t d16_3;
@@ -808,7 +803,7 @@ void I8080::_I8080_DAD(uint8_t rp) {
 }
 
 //DAA
-void I8080::_I8080_DAA() {
+void I8080::_DAA() {
 	uint8_t d8;
 	d8 = 0;
 	if (((_rA & 0x0F) > 9) || (_getFlags_A() == 1))
@@ -836,7 +831,7 @@ void I8080::_I8080_DAA() {
 }
 
 //ANA
-void I8080::_I8080_ANA(uint8_t SSS) {
+void I8080::_ANA(uint8_t SSS) {
 	if (SSS == _Reg_M)
 	{
 		_ACT = _rA;
@@ -865,7 +860,7 @@ void I8080::_I8080_ANA(uint8_t SSS) {
 }
 
 //ANI
-void I8080::_I8080_ANI() {
+void I8080::_ANI() {
 	_PC++;
 	_ACT = _rA;
 	MEM::_AB = _PC;
@@ -886,7 +881,7 @@ void I8080::_I8080_ANI() {
 }
 
 //ORA
-void I8080::_I8080_ORA(uint8_t SSS) {
+void I8080::_ORA(uint8_t SSS) {
 	if (SSS == _Reg_M)
 	{
 		_ACT = _rA;
@@ -907,7 +902,7 @@ void I8080::_I8080_ORA(uint8_t SSS) {
 }
 
 //ORI
-void I8080::_I8080_ORI() {
+void I8080::_ORI() {
 	_PC++;
 	_ACT = _rA;
 	MEM::_AB = _PC;
@@ -921,7 +916,7 @@ void I8080::_I8080_ORI() {
 }
 
 //XRA
-void I8080::_I8080_XRA(uint8_t SSS) {
+void I8080::_XRA(uint8_t SSS) {
 	if (SSS == _Reg_M)
 	{
 		_ACT = _rA;
@@ -942,7 +937,7 @@ void I8080::_I8080_XRA(uint8_t SSS) {
 }
 
 //XRI
-void I8080::_I8080_XRI() {
+void I8080::_XRI() {
 	_PC++;
 	_ACT = _rA;
 	MEM::_AB = _PC;
@@ -956,7 +951,7 @@ void I8080::_I8080_XRI() {
 }
 
 //CMP
-void I8080::_I8080_CMP(uint8_t SSS) {
+void I8080::_CMP(uint8_t SSS) {
 	if (SSS != _Reg_M) {
 		_ACT = _rA;
 		_TMP = _Regs[SSS];
@@ -986,7 +981,7 @@ void I8080::_I8080_CMP(uint8_t SSS) {
 }
 
 //CPI
-void I8080::_I8080_CPI() {
+void I8080::_CPI() {
 	_ACT = _rA;
 	_PC++;
 	MEM::_AB = _PC;
@@ -1011,7 +1006,7 @@ void I8080::_I8080_CPI() {
 }
 
 //RRC
-void I8080::_I8080_RRC() {
+void I8080::_RRC() {
 	_ALU = _rA;
 	_setFlags_C(bitRead(_ALU, 0));
 	_rA = _ALU >> 1;
@@ -1020,7 +1015,7 @@ void I8080::_I8080_RRC() {
 }
 
 //RLC
-void I8080::_I8080_RLC() {
+void I8080::_RLC() {
 	_ALU = _rA;
 	_setFlags_C(bitRead(_ALU, 7));
 	_rA = _ALU << 1;
@@ -1029,7 +1024,7 @@ void I8080::_I8080_RLC() {
 }
 
 //RAL
-void I8080::_I8080_RAL() {
+void I8080::_RAL() {
 	_ALU = _rA;
 	_rA = ((_ALU << 1) & B11111110) | _getFlags_C();
 	_setFlags_C(bitRead(_ALU, 7));
@@ -1037,7 +1032,7 @@ void I8080::_I8080_RAL() {
 }
 
 //RAR
-void I8080::_I8080_RAR() {
+void I8080::_RAR() {
 	_ALU = _rA;
 	_rA = ((_ALU >> 1) & B01111111) | (_getFlags_C() << 7);
 	_setFlags_C(bitRead(_ALU, 0));
@@ -1045,13 +1040,13 @@ void I8080::_I8080_RAR() {
 }
 
 //CMA
-void I8080::_I8080_CMA() {
+void I8080::_CMA() {
 	_rA = ~_rA;
 	_PC++;
 }
 
 //CMC
-void I8080::_I8080_CMC() {
+void I8080::_CMC() {
 	if (_getFlags_C() != 0)
 	{
 		_setFlags_C(0);
@@ -1063,13 +1058,13 @@ void I8080::_I8080_CMC() {
 }
 
 //STC
-void I8080::_I8080_STC() {
+void I8080::_STC() {
 	_setFlags_C(1);
 	_PC++;
 }
 
 //JMP
-void I8080::_I8080_JMP() {
+void I8080::_JMP() {
 	_PC++;
 	MEM::_AB = _PC;
 	MEM::_RD();
@@ -1083,7 +1078,7 @@ void I8080::_I8080_JMP() {
 }
 
 //Jccc
-void I8080::_I8080_JCCC(uint8_t CCC)
+void I8080::_JCCC(uint8_t CCC)
 {
 	boolean COND = false;
 	switch (CCC) {
@@ -1135,7 +1130,7 @@ void I8080::_I8080_JCCC(uint8_t CCC)
 }
 
 //CALL
-void I8080::_I8080_CALL() {
+void I8080::_CALL() {
 	_SP--;
 	_PC++;
 	MEM::_AB = _PC;
@@ -1157,7 +1152,7 @@ void I8080::_I8080_CALL() {
 }
 
 //Cccc
-void I8080::_I8080_CCCC(uint8_t CCC) {
+void I8080::_CCCC(uint8_t CCC) {
 	boolean COND = false;
 	switch (CCC) {
 	case B000: if (_getFlags_Z() == 0) {
@@ -1218,7 +1213,7 @@ void I8080::_I8080_CCCC(uint8_t CCC) {
 }
 
 //RET
-void I8080::_I8080_RET()
+void I8080::_RET()
 {
 	MEM::_AB = _SP;
 	MEM::_RD();
@@ -1232,7 +1227,7 @@ void I8080::_I8080_RET()
 }
 
 //Rccc
-void I8080::_I8080_RCCC(uint8_t CCC)
+void I8080::_RCCC(uint8_t CCC)
 {
 	boolean COND = false;
 	switch (CCC) {
@@ -1286,7 +1281,7 @@ void I8080::_I8080_RCCC(uint8_t CCC)
 }
 
 //RST
-void I8080::_I8080_RST(uint8_t n) {
+void I8080::_RST(uint8_t n) {
 	_PC++;
 	pc2sp();
 	_PC = n * 8;
@@ -1294,13 +1289,13 @@ void I8080::_I8080_RST(uint8_t n) {
 
 
 //PCHL
-void I8080::_I8080_PCHL() {
+void I8080::_PCHL() {
 	_PC = _rpHL;
 	MEM::_AB = _PC;
 }
 
 //XTHL
-void I8080::_I8080_XTHL() {
+void I8080::_XTHL() {
 	MEM::_AB = _SP;
 	MEM::_RD();
 	_SP++;
@@ -1321,14 +1316,14 @@ void I8080::_I8080_XTHL() {
 }
 
 //SPHL
-void I8080::_I8080_SPHL()
+void I8080::_SPHL()
 {
 	_SP = _rpHL;
 	_PC++;
 }
 
 //PUSH
-void I8080::_I8080_PUSH(uint8_t rp) {
+void I8080::_PUSH(uint8_t rp) {
 	_SP--;
 	MEM::_AB = _SP;
 	_SP--;
@@ -1367,7 +1362,7 @@ void I8080::_I8080_PUSH(uint8_t rp) {
 }
 
 //POP
-void I8080::_I8080_POP(uint8_t rp) {
+void I8080::_POP(uint8_t rp) {
 	MEM::_AB = _SP;
 	MEM::_RD();
 	_SP++;
@@ -1406,7 +1401,7 @@ void I8080::_I8080_POP(uint8_t rp) {
 }
 
 //IN
-void I8080::_I8080_IN() {
+void I8080::_IN() {
 	_PC++;
 	MEM::_AB = _PC;
 	MEM::_RD();
@@ -1419,7 +1414,7 @@ void I8080::_I8080_IN() {
 }
 
 //OUT
-void I8080::_I8080_OUT() {
+void I8080::_OUT() {
 	_PC++;
 	MEM::_AB = _PC;
 	MEM::_RD();
@@ -1432,13 +1427,13 @@ void I8080::_I8080_OUT() {
 }
 
 //EI
-void I8080::_I8080_EI() {
+void I8080::_EI() {
 	INTE = true;
 	_PC++;
 }
 
 //DI
-void I8080::_I8080_DI() {
+void I8080::_DI() {
 	INTE = false;
 	_PC++;
 }

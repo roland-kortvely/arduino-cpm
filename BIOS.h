@@ -17,9 +17,11 @@ class BIOS
  public:
 	static bool IPL();
 	static bool INT();
+
 	static void _GOCPM(boolean jmp);
 	static void _BOOT();
 	static void _WBOOT();
+
 	static void _BIOS_BOOT();
 	static void _BIOS_WBOOT();
 	static void _BIOS_CONST();

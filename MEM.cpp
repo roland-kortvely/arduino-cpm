@@ -96,6 +96,7 @@ uint8_t MEM::bank_get(uint8_t block) {
 //address <- _AB
 //data -> _DB
 void MEM::_RD() {
+
 	uint32_t blk;
 	uint32_t blk_tmp;
 	uint16_t start_tmp;
@@ -103,14 +104,17 @@ void MEM::_RD() {
 	uint8_t sel_blk;
 	uint8_t res;
 	uint8_t LRC;
+
 	if (_AB > MEM_MAX) {
 		_DB = 0xFF;//not memory
 		return;
 	}
+
 	blk = ((uint32_t)(_AB)+(uint32_t)((MMU_MAP[_AB / MMU_BLOCK_SIZE]) * 65536UL)) / CACHE_LINE_SIZE;
 	blk = blk + SD_MEM_OFFSET;
 	//Serial.println(blk, HEX);
 	sel_blk = 0xff;
+
 	i = 0;
 	do {
 		if (blk == cache_tag[i]) {
@@ -118,6 +122,7 @@ void MEM::_RD() {
 		}
 		i++;
 	} while ((sel_blk == 0xff) && (i < CACHE_LINES_NUM));
+
 	if (sel_blk == 0xff) { //cache miss
 		sel_blk = CACHE_LINES_NUM - 1;
 		if (cache_tag[sel_blk] != CACHE_LINE_EMPTY)
@@ -128,9 +133,9 @@ void MEM::_RD() {
 					LRC = 0;//LRC reset
 					for (i = 0; i < CACHE_LINE_SIZE; i++) {
 						SD::_buffer[i] = cache[cache_start[0] + i];
-						LRC = SD::_buffer[i] ^ LRC;//LRC calculation
+						LRC = SD::_buffer[i] ^ LRC;					//LRC calculation
 					}
-					SD::_buffer[CACHE_LINE_SIZE] = LRC;//LRC write
+					SD::_buffer[CACHE_LINE_SIZE] = LRC;				//LRC write
 					res = SD::writeSD(cache_tag[0]);
 				}
 			}
@@ -287,7 +292,7 @@ uint32_t MEM::MEM_TEST(boolean brk) {
 		}
 		if (brk && CONSOLE::con_ready()) {
 			CONSOLE::con_read();
-			return 0xFFFFF;//break
+			return 0xFFFFF;						//break
 		}
 	}
 

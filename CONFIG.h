@@ -14,44 +14,44 @@
 
 //IO
 constexpr auto LED_delay = 3;
-constexpr auto LED_pin = 9;									//D9 pin - LED
-constexpr auto IN_pin = 8;									//D8 pin - IN
-constexpr auto OUT_pin = 7;									//D7 pin - OUT
-constexpr auto IN_PORT = 0xF0;								//IN port
-constexpr auto OUT_PORT = 0xF1;								//OUT port
+constexpr auto LED_pin   = 13;								//D9 pin - LED
+constexpr auto IN_pin    = 8;								//D8 pin - IN
+constexpr auto OUT_pin   = 7;								//D7 pin - OUT
+constexpr auto IN_PORT   = 0xF0;							//IN port
+constexpr auto OUT_PORT  = 0xF1;							//OUT port
 
  //BOOT area
 constexpr auto SEC_BUF = 0x80;								//sector buffer
 
 //BIOS
-constexpr auto CPMSYS_COUNT = 11;
-constexpr auto CPMSYS_LEN = 5632;
-constexpr auto CPMSYS_START = 0x100;
-constexpr auto CPMSYS_CS = 0x1A;
+constexpr auto CPMSYS_COUNT = 11;							//??
+constexpr auto CPMSYS_LEN	= 5632;
+constexpr auto CPMSYS_START = 0x100;						//CPM.SYS SD offset
+constexpr auto CPMSYS_CS	= 0x1A;							//CPM checksum
 
 //I/O devices flag
-constexpr auto ACK = 0x06;
-constexpr auto CPM_LBL_START = 0x18;
-constexpr auto CPM_LBL_LEN = 36;
+constexpr auto ACK				= 0x06;
+constexpr auto CPM_LBL_START	= 0x18;
+constexpr auto CPM_LBL_LEN		= 36;
 constexpr auto CPM_SERIAL_START = 0x328;
-constexpr auto CPM_SERIAL_LEN = 6;
+constexpr auto CPM_SERIAL_LEN	= 6;
 
-constexpr auto SS_SD_pin = 10;								//SS pin (D10)
+constexpr auto SS_SD_pin   = 10;							//SS pin (D10)
 constexpr auto SD_BLK_SIZE = 128;							//SD block size
 
-constexpr auto FDD_NUM = 4;
-constexpr auto SD_DISKS_OFFSET = 0x0001000;
-constexpr auto SD_DISK_SIZE = 0x0001000;
-constexpr auto COM_BAUD = 9600;
-constexpr auto CPM_EMPTY = 0xE5;							//empty byte (disk)
-constexpr auto SECTOR_SIZE = 128;
+constexpr auto FDD_NUM			= 4;
+constexpr auto SD_DISKS_OFFSET	= 0x0001000;
+constexpr auto SD_DISK_SIZE		= 0x0001000;
+constexpr auto COM_BAUD			= 9600;
+constexpr auto CPM_EMPTY		= 0xE5;						//empty byte (disk)
+//constexpr auto SECTOR_SIZE = 128;
 constexpr auto TRACK_SIZE = 26;
 constexpr auto DISK_SIZE = 77;
 constexpr auto FDD_SIZE = TRACK_SIZE * DISK_SIZE;			//sectors
 constexpr auto DISK_SUCCESS = 0;
 constexpr auto DISK_ERROR = 1;
 
-constexpr auto MEM_SIZE = 64;								//Sys RAM
+constexpr auto MEM_SIZE = 512;								//Sys RAM
 constexpr auto MEM_MAX = (MEM_SIZE - 1) * 1024U + 1023U;	//max sys RAM addr
 constexpr auto RAM_SIZE = 512;								//RAM Size
 
@@ -132,23 +132,23 @@ constexpr auto CTRL_O_KEY = 0x0F;
 constexpr auto CTRL_X_KEY = 0x18;
 constexpr auto CTRL_SLASH_KEY = 0x1F;
 
-constexpr auto MON_BUFFER_SIZE = 32;	//monitor input buffer size
+constexpr auto MON_BUFFER_SIZE = 64;			//monitor input buffer size
 
 //console ports
 //SIO-A//SSM
 constexpr auto  SIOA_CON_PORT_STATUS = 0x00;	//status
-constexpr auto  SIOA_CON_PORT_DATA = 0x01;		//data
+constexpr auto  SIOA_CON_PORT_DATA   = 0x01;	//data
 
 //SIO-2
 constexpr auto  SIO2_CON_PORT_STATUS = 0x10;	//status
-constexpr auto  SIO2_CON_PORT_DATA = 0x11;		//data
+constexpr auto  SIO2_CON_PORT_DATA	 = 0x11;	//data
 
 //FDD controller ports
-constexpr auto FDD_BASE = 0xE0;//FDD base address
-constexpr auto FDD_PORT_CMD = FDD_BASE + 0; //status/command
-constexpr auto FDD_PORT_TRK = FDD_BASE + 1; //track
-constexpr auto FDD_PORT_SEC = FDD_BASE + 2; //sector
-constexpr auto FDD_PORT_DRV = FDD_BASE + 3; //drive select
+constexpr auto FDD_BASE		= 0xE0;				//FDD base address
+constexpr auto FDD_PORT_CMD = FDD_BASE + 0;		//status/command
+constexpr auto FDD_PORT_TRK = FDD_BASE + 1;		//track
+constexpr auto FDD_PORT_SEC = FDD_BASE + 2;		//sector
+constexpr auto FDD_PORT_DRV = FDD_BASE + 3;		//drive select
 
 //DMA controller ports
 constexpr auto FDD_PORT_DMA_ADDR_LO = FDD_BASE + 4; //DMA address low byte

@@ -38,7 +38,9 @@ void CMD::exec()
 	}
 
 	CONSOLE::color(1);
-	CONSOLE::print(F("INVALID COMMAND!"));
+	CONSOLE::print(F("INVALID COMMAND! {"));
+	CONSOLE::print(CONSOLE::mon_buffer);
+	CONSOLE::println("}");
 	CONSOLE::color(9);
 }
 
@@ -103,7 +105,7 @@ void CMD::format() {
 		SD::_dsk_buffer[i] = CPM_EMPTY;
 	}
 
-	for (uint32_t i = 0; i < DISK_SIZE*TRACK_SIZE; i++) {
+	for (uint32_t i = 0; i < DISK_SIZE * TRACK_SIZE; i++) {
 		CONSOLE::print("\r");
 		CONSOLE::print(F("SECTOR "));
 		Serial.print(i, DEC);

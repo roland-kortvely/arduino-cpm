@@ -3,8 +3,8 @@
  */
 
 
-#ifndef _I8080_h
-#define _I8080_h
+#ifndef _h
+#define _h
 
 #if defined(ARDUINO) && ARDUINO >= 100
 #include "arduino.h"
@@ -103,14 +103,14 @@ public:
 	static bool INTE;
 
 	//registers
-	static volatile uint8_t _W;// W register
-	static volatile uint8_t _Z;// Z register
-	static volatile uint8_t _ACT;// ACT register
-	static volatile uint8_t _TMP;// TMP register
-	static volatile uint8_t _ALU;// ALU
-	static volatile uint16_t _PC; //program counter
-	static volatile uint16_t _SP; //stack pointer
-	static volatile uint8_t _IR; //instruction register
+	static volatile uint8_t _W;					// W register
+	static volatile uint8_t _Z;					// Z register
+	static volatile uint8_t _ACT;				// ACT register
+	static volatile uint8_t _TMP;				// TMP register
+	static volatile uint8_t _ALU;				// ALU
+	static volatile uint16_t _PC;				//program counter
+	static volatile uint16_t _SP;				//stack pointer
+	static volatile uint8_t _IR;				//instruction register
 
 	static void init();
 	static void boot();
@@ -118,64 +118,64 @@ public:
 	static void state();
 	static uint16_t pc2a16();
 	static void pc2sp();
-	static void _I8080_();
-	static void _I8080_HLT();
-	static void _I8080_NOP();
-	static void _I8080_MOV(uint8_t DDD, uint8_t SSS);
-	static void _I8080_MVI(uint8_t DDD);
-	static void _I8080_LXI(uint8_t rp);
-	static void _I8080_LDA();
-	static void _I8080_STA();
-	static void _I8080_LHLD();
-	static void _I8080_SHLD();
-	static void _I8080_LDAX(uint8_t rp);
-	static void _I8080_STAX(uint8_t rp);
-	static void _I8080_XCHG();
-	static void _I8080_ADD(uint8_t SSS);
-	static void _I8080_ADI();
-	static void _I8080_ADC(uint8_t SSS);
-	static void _I8080_ACI();
-	static void _I8080_SUB(uint8_t SSS);
-	static void _I8080_SUI();
-	static void _I8080_SBB(uint8_t SSS);
-	static void _I8080_SBI();
-	static void _I8080_INR(uint8_t DDD);
-	static void _I8080_DCR(uint8_t DDD);
-	static void _I8080_INX(uint8_t rp);
-	static void _I8080_DCX(uint8_t rp);
-	static void _I8080_DAD(uint8_t rp);
-	static void _I8080_DAA();
-	static void _I8080_ANA(uint8_t SSS);
-	static void _I8080_ANI();
-	static void _I8080_ORA(uint8_t SSS);
-	static void _I8080_ORI();
-	static void _I8080_XRA(uint8_t SSS);
-	static void _I8080_XRI();
-	static void _I8080_CMP(uint8_t SSS);
-	static void _I8080_CPI();
-	static void _I8080_RRC();
-	static void _I8080_RLC();
-	static void _I8080_RAL();
-	static void _I8080_RAR();
-	static void _I8080_CMA();
-	static void _I8080_CMC();
-	static void _I8080_STC();
-	static void _I8080_JMP();
-	static void _I8080_JCCC(uint8_t CCC);
-	static void _I8080_CALL();
-	static void _I8080_CCCC(uint8_t CCC);
-	static void _I8080_RET();
-	static void _I8080_RCCC(uint8_t CCC);
-	static void _I8080_RST(uint8_t n);
-	static void _I8080_PCHL();
-	static void _I8080_XTHL();
-	static void _I8080_SPHL();
-	static void _I8080_PUSH(uint8_t rp);
-	static void _I8080_POP(uint8_t rp);
-	static void _I8080_IN();
-	static void _I8080_OUT();
-	static void _I8080_EI();
-	static void _I8080_DI();
+
+	static void _();							//NOP
+	static void _HLT();
+	static void _MOV(uint8_t DDD, uint8_t SSS);
+	static void _MVI(uint8_t DDD);
+	static void _LXI(uint8_t rp);
+	static void _LDA();
+	static void _STA();
+	static void _LHLD();
+	static void _SHLD();
+	static void _LDAX(uint8_t rp);
+	static void _STAX(uint8_t rp);
+	static void _XCHG();
+	static void _ADD(uint8_t SSS);
+	static void _ADI();
+	static void _ADC(uint8_t SSS);
+	static void _ACI();
+	static void _SUB(uint8_t SSS);
+	static void _SUI();
+	static void _SBB(uint8_t SSS);
+	static void _SBI();
+	static void _INR(uint8_t DDD);
+	static void _DCR(uint8_t DDD);
+	static void _INX(uint8_t rp);
+	static void _DCX(uint8_t rp);
+	static void _DAD(uint8_t rp);
+	static void _DAA();
+	static void _ANA(uint8_t SSS);
+	static void _ANI();
+	static void _ORA(uint8_t SSS);
+	static void _ORI();
+	static void _XRA(uint8_t SSS);
+	static void _XRI();
+	static void _CMP(uint8_t SSS);
+	static void _CPI();
+	static void _RRC();
+	static void _RLC();
+	static void _RAL();
+	static void _RAR();
+	static void _CMA();
+	static void _CMC();
+	static void _STC();
+	static void _JMP();
+	static void _JCCC(uint8_t CCC);
+	static void _CALL();
+	static void _CCCC(uint8_t CCC);
+	static void _RET();
+	static void _RCCC(uint8_t CCC);
+	static void _RST(uint8_t n);
+	static void _PCHL();
+	static void _XTHL();
+	static void _SPHL();
+	static void _PUSH(uint8_t rp);
+	static void _POP(uint8_t rp);
+	static void _IN();
+	static void _OUT();
+	static void _EI();
+	static void _DI();
 };
 
 #endif

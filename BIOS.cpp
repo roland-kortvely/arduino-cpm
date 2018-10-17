@@ -10,6 +10,7 @@
 #include "FDD.h"
 #include "BIOS.h"
 #include "IO.h"
+#include "CONSOLE.h"
 
 bool BIOS::IPL()
 {
@@ -17,13 +18,13 @@ bool BIOS::IPL()
 	Serial.println(F("IPL PRECHECK"));
 
 	uint16_t i;
-	uint16_t j;
-	uint16_t k;
-	uint8_t l;
+
 	uint8_t checksum = 0x00;
 	uint8_t res;
 	uint8_t d8;
+
 	boolean success = false;
+
 	char hex[2];
 
 	Serial.print(RAM_SIZE, DEC);
@@ -48,43 +49,17 @@ bool BIOS::IPL()
 	FDD::FDD_REG_SEC = 1;
 
 	//reading from SD
-	for (j = 0; j < CPMSYS_COUNT; j++) {
-		for (k = 0; k < 512; k += SD_BLK_SIZE) {
-			/*
-		 _buffer[0] = 1;
-		 _buffer[1] = 2;
-		 _buffer[2] = 3;
-		 _buffer[3] = 4;
-
-		 writeSD(j + CPMSYS_START);
-
-		 Serial.print("W_SD: {");
-		 Serial.print(_buffer[0], HEX);
-		 Serial.print(_buffer[1], HEX);
-		 Serial.print(_buffer[2], HEX);
-		 Serial.print(_buffer[3], HEX);
-		 Serial.println("}");*/
+	for (uint16_t j = 0; j < CPMSYS_COUNT; j++) {
+		for (uint16_t k = 0; k < 512; k += SD_BLK_SIZE) {
 
 			res = SD::readSD(j + CPMSYS_START, k);
-			/*
-					Serial.print("R_SD: {");
-					Serial.print(res, HEX);
-					Serial.println("}");
 
-					Serial.print("R_SD: {");
-					Serial.print(res);
-					Serial.println("}");
-
-					Serial.println("Breakpoint! HALT..");
-					while(1) {}
-					*/
-
-			for (i = 0; i < SD_BLK_SIZE; i++) {
+			for (uint16_t i = 0; i < SD_BLK_SIZE; i++) {
 				SD::_dsk_buffer[i] = SD::_buffer[i];
 			}
-			for (i = 0; i < SD_BLK_SIZE; i++) {
-				MEM::MEM::_AB = CBASE + i + k + j * 512;
-				MEM::MEM::_DB = SD::_dsk_buffer[i];
+			for (uint16_t i = 0; i < SD_BLK_SIZE; i++) {
+				MEM::_AB = CBASE + i + k + j * 512;
+				MEM::_DB = SD::_dsk_buffer[i];
 				MEM::_WR();
 			}
 		}
@@ -93,11 +68,11 @@ bool BIOS::IPL()
 	}
 
 	//checksum checking
-	for (j = 0; j < CPMSYS_COUNT; j++) {
-		for (i = 0; i < 512; i++) {
-			MEM::MEM::_AB = CBASE + i + j * 512;
+	for (uint16_t j = 0; j < CPMSYS_COUNT; j++) {
+		for (uint16_t i = 0; i < 512; i++) {
+			MEM::_AB = CBASE + i + j * 512;
 			MEM::_RD();
-			d8 = MEM::MEM::_DB;
+			d8 = MEM::_DB;
 			checksum = checksum + d8;
 		}
 	}
@@ -110,7 +85,7 @@ bool BIOS::IPL()
 
 	if (checksum != CPMSYS_CS) {
 
-		Serial.println(F("ERR!"));
+		CONSOLE::error(F("\nCPM.SYS CHECKSUM ERROR!"));
 		success = false;
 
 		return success;
@@ -119,17 +94,18 @@ bool BIOS::IPL()
 		Serial.println(F("O.K.!"));
 		success = true;
 
-		for (j = CPM_LBL_START; j < (CPM_LBL_START + CPM_LBL_LEN); j++) {
-			MEM::MEM::_AB = CBASE + j;
+		for (uint16_t j = CPM_LBL_START; j < (CPM_LBL_START + CPM_LBL_LEN); j++) {
+			MEM::_AB = CBASE + j;
 			MEM::_RD();
-			Serial.write(MEM::MEM::_DB);
+			Serial.write(MEM::_DB);
 		}
+
 		Serial.println("");
 		Serial.print(F("Serial: "));
-		for (j = CPM_SERIAL_START; j < (CPM_SERIAL_START + CPM_SERIAL_LEN); j++) {
-			MEM::MEM::_AB = CBASE + j;
+		for (uint16_t j = CPM_SERIAL_START; j < (CPM_SERIAL_START + CPM_SERIAL_LEN); j++) {
+			MEM::_AB = CBASE + j;
 			MEM::_RD();
-			sprintf(hex, "%02X", MEM::MEM::_DB);
+			sprintf(hex, "%02X", MEM::_DB);
 			Serial.print(hex);
 		}
 		Serial.println("");
@@ -137,73 +113,73 @@ bool BIOS::IPL()
 
 		i = _DPBASE;
 
-		for (l = 0; l < FDD_NUM; l++) {
-			MEM::MEM::_AB = i;
-			MEM::MEM::_DB = 0x00;
+		for (uint16_t l = 0; l < FDD_NUM; l++) {
+			MEM::_AB = i;
+			MEM::_DB = 0x00;
 			MEM::_WR();
 			i++;
-			MEM::MEM::_AB = i;
-			MEM::MEM::_DB = 0x00;
+			MEM::_AB = i;
+			MEM::_DB = 0x00;
 			MEM::_WR();
 			i++;
-			MEM::MEM::_AB = i;
-			MEM::MEM::_DB = 0x00;
+			MEM::_AB = i;
+			MEM::_DB = 0x00;
 			MEM::_WR();
 			i++;
-			MEM::MEM::_AB = i;
-			MEM::MEM::_DB = 0x00;
+			MEM::_AB = i;
+			MEM::_DB = 0x00;
 			MEM::_WR();
 			i++;
-			MEM::MEM::_AB = i;
-			MEM::MEM::_DB = 0x00;
+			MEM::_AB = i;
+			MEM::_DB = 0x00;
 			MEM::_WR();
 			i++;
-			MEM::MEM::_AB = i;
-			MEM::MEM::_DB = 0x00;
+			MEM::_AB = i;
+			MEM::_DB = 0x00;
 			MEM::_WR();
 			i++;
-			MEM::MEM::_AB = i;
-			MEM::MEM::_DB = 0x00;
+			MEM::_AB = i;
+			MEM::_DB = 0x00;
 			MEM::_WR();
 			i++;
-			MEM::MEM::_AB = i;
-			MEM::MEM::_DB = 0x00;
+			MEM::_AB = i;
+			MEM::_DB = 0x00;
 			MEM::_WR();
 			//DIRBUF
 			i++;
-			MEM::MEM::_AB = i;
-			MEM::MEM::_DB = lowByte(_DIRBUF);
+			MEM::_AB = i;
+			MEM::_DB = lowByte(_DIRBUF);
 			MEM::_WR();
 			i++;
-			MEM::MEM::_AB = i;
-			MEM::MEM::_DB = highByte(_DIRBUF);
+			MEM::_AB = i;
+			MEM::_DB = highByte(_DIRBUF);
 			MEM::_WR();
 			//DPB
 			i++;
-			MEM::MEM::_AB = i;
-			MEM::MEM::_DB = lowByte(_DPBLK);
+			MEM::_AB = i;
+			MEM::_DB = lowByte(_DPBLK);
 			MEM::_WR();
 			i++;
-			MEM::MEM::_AB = i;
-			MEM::MEM::_DB = highByte(_DPBLK);
+			MEM::_AB = i;
+			MEM::_DB = highByte(_DPBLK);
 			MEM::_WR();
 			//CSV
 			i++;
-			MEM::MEM::_AB = i;
-			MEM::MEM::_DB = lowByte(_CHK00);
+			MEM::_AB = i;
+			MEM::_DB = lowByte(_CHK00);
 			MEM::_WR();
 			i++;
-			MEM::MEM::_AB = i;
-			MEM::MEM::_DB = highByte(_CHK00);
+			MEM::_AB = i;
+			MEM::_DB = highByte(_CHK00);
 			MEM::_WR();
 			//ALV
 			i++;
-			MEM::MEM::_AB = i;
-			MEM::MEM::_DB = lowByte(_ALL00);
+			MEM::_AB = i;
+			MEM::_DB = lowByte(_ALL00);
 			MEM::_WR();
 			i++;
-			MEM::MEM::_AB = i;
-			MEM::MEM::_DB = highByte(_ALL00);
+			MEM::_AB = i;
+			MEM::_DB = highByte(_ALL00);
 			MEM::_WR();
 			i++;
 		}
@@ -211,62 +187,62 @@ bool BIOS::IPL()
 		//DPB init
 		i = _DPBLK;
 		//SPT
-		MEM::MEM::_AB = i;
-		MEM::MEM::_DB = 26;
+		MEM::_AB = i;
+		MEM::_DB = 26;
 		MEM::_WR();
-		MEM::MEM::_AB = i + 1;
-		MEM::MEM::_DB = 0;
+		MEM::_AB = i + 1;
+		MEM::_DB = 0;
 		MEM::_WR();
 		//BSH
-		MEM::MEM::_AB = i + 2;
-		MEM::MEM::_DB = 3;
+		MEM::_AB = i + 2;
+		MEM::_DB = 3;
 		MEM::_WR();
 		//BLM
-		MEM::MEM::_AB = i + 3;
-		MEM::MEM::_DB = 7;
+		MEM::_AB = i + 3;
+		MEM::_DB = 7;
 		MEM::_WR();
 		//EXM
-		MEM::MEM::_AB = i + 4;
-		MEM::MEM::_DB = 0;
+		MEM::_AB = i + 4;
+		MEM::_DB = 0;
 		MEM::_WR();
 		//DSM
-		MEM::MEM::_AB = i + 5;
-		MEM::MEM::_DB = 242;
+		MEM::_AB = i + 5;
+		MEM::_DB = 242;
 		MEM::_WR();
-		MEM::MEM::_AB = i + 6;
-		MEM::MEM::_DB = 0;
+		MEM::_AB = i + 6;
+		MEM::_DB = 0;
 		MEM::_WR();
 		//DRM
-		MEM::MEM::_AB = i + 7;
-		MEM::MEM::_DB = 63;
+		MEM::_AB = i + 7;
+		MEM::_DB = 63;
 		MEM::_WR();
-		MEM::MEM::_AB = i + 8;
-		MEM::MEM::_DB = 0;
+		MEM::_AB = i + 8;
+		MEM::_DB = 0;
 		MEM::_WR();
 		//AL0    
-		MEM::MEM::_AB = i + 9;
-		MEM::MEM::_DB = 192;
+		MEM::_AB = i + 9;
+		MEM::_DB = 192;
 		MEM::_WR();
 		//AL1
-		MEM::MEM::_AB = i + 0xA;
-		MEM::MEM::_DB = 0;
+		MEM::_AB = i + 0xA;
+		MEM::_DB = 0;
 		MEM::_WR();
 		//CKS
-		MEM::MEM::_AB = i + 0xB;
-		MEM::MEM::_DB = 0;
+		MEM::_AB = i + 0xB;
+		MEM::_DB = 0;
 		MEM::_WR();
-		MEM::MEM::_AB = i + 0xC;
-		MEM::MEM::_DB = 0;
+		MEM::_AB = i + 0xC;
+		MEM::_DB = 0;
 		MEM::_WR();
 		//OFF
-		MEM::MEM::_AB = i + 0xD;
-		MEM::MEM::_DB = 0;
+		MEM::_AB = i + 0xD;
+		MEM::_DB = 0;
 		MEM::_WR();
-		MEM::MEM::_AB = i + 0xE;
-		MEM::MEM::_DB = 0;
+		MEM::_AB = i + 0xE;
+		MEM::_DB = 0;
 		MEM::_WR();
-		MEM::MEM::_AB = i + 0xF;
-		MEM::MEM::_DB = 0;
+		MEM::_AB = i + 0xF;
+		MEM::_DB = 0;
 		MEM::_WR();
 
 		/*
@@ -411,6 +387,7 @@ void BIOS::_GOCPM(boolean jmp) {
 	MEM::_AB = CDISK;
 	MEM::_RD();
 	_rC = MEM::_DB;
+
 	//GO TO CP/M FOR FURTHER PROCESSING
 	if (jmp) {
 		I8080::_PC = CBASE;

@@ -107,22 +107,28 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BIOS.h" />
     <ClInclude Include="C:\Users\mikro\Downloads\cpm\Sd2Card.h" />
     <ClInclude Include="C:\Users\mikro\Downloads\cpm\Sd2PinMap.h" />
     <ClInclude Include="C:\Users\mikro\Downloads\cpm\SdInfo.h" />
+    <ClInclude Include="CMD.h" />
     <ClInclude Include="CONFIG.h" />
     <ClInclude Include="CONSOLE.h" />
     <ClInclude Include="EEPROM.h" />
     <ClInclude Include="FDD.h" />
     <ClInclude Include="i8080.h" />
+    <ClInclude Include="i8080_helper.h" />
     <ClInclude Include="IO.h" />
     <ClInclude Include="IPL.h" />
     <ClInclude Include="MEM.h" />
+    <ClInclude Include="RAM.h" />
     <ClInclude Include="SD.h" />
     <ClInclude Include="__vm\.CPM.vsarduino.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BIOS.cpp" />
     <ClCompile Include="C:\Users\mikro\Downloads\cpm\Sd2Card.cpp" />
+    <ClCompile Include="CMD.cpp" />
     <ClCompile Include="CONFIG.cpp" />
     <ClCompile Include="CONSOLE.cpp" />
     <ClCompile Include="FDD.cpp" />
@@ -130,6 +136,7 @@
     <ClCompile Include="IO.cpp" />
     <ClCompile Include="IPL.cpp" />
     <ClCompile Include="MEM.cpp" />
+    <ClCompile Include="RAM.cpp" />
     <ClCompile Include="SD.cpp" />
   </ItemGroup>
   <PropertyGroup>

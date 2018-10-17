@@ -6,8 +6,8 @@
 #include "BIOS.h"
 #include "i8080.h"
 
-#ifndef _I8080_HELPER_h
-#define _I8080_HELPER_h
+#ifndef _HELPER_h
+#define _HELPER_h
 
 #if defined(ARDUINO) && ARDUINO >= 100
 	#include "arduino.h"
@@ -16,811 +16,811 @@
 #endif
 
 void do0x00() {
-	I8080::_I8080_NOP();
+	I8080::_();				//*NOP
 }
 void do0x01() {
-	I8080::_I8080_LXI(_RP_BC);
+	I8080::_LXI(_RP_BC);
 }
 void do0x02() {
-	I8080::_I8080_STAX(_RP_BC);
+	I8080::_STAX(_RP_BC);
 }
 void do0x03() {
-	I8080::_I8080_INX(_Reg_B);
+	I8080::_INX(_Reg_B);
 }
 void do0x04() {
-	I8080::_I8080_INR(_Reg_B);
+	I8080::_INR(_Reg_B);
 }
 void do0x05() {
-	I8080::_I8080_DCR(_Reg_B);
+	I8080::_DCR(_Reg_B);
 }
 void do0x06() {
-	I8080::_I8080_MVI(_Reg_B);
+	I8080::_MVI(_Reg_B);
 }
 void do0x07() {
-	I8080::_I8080_RLC();
+	I8080::_RLC();
 }
 void do0x08() {
-	I8080::_I8080_();//*NOP
+	I8080::_();				//*NOP
 }
 void do0x09() {
-	I8080::_I8080_DAD(_RP_BC);
+	I8080::_DAD(_RP_BC);
 }
 void do0x0A() {
-	I8080::_I8080_LDAX(_RP_BC);
+	I8080::_LDAX(_RP_BC);
 }
 void do0x0B() {
-	I8080::_I8080_DCX(_Reg_B);
+	I8080::_DCX(_Reg_B);
 }
 void do0x0C() {
-	I8080::_I8080_INR(_Reg_C);
+	I8080::_INR(_Reg_C);
 }
 void do0x0D() {
-	I8080::_I8080_DCR(_Reg_C);
+	I8080::_DCR(_Reg_C);
 }
 void do0x0E() {
-	I8080::_I8080_MVI(_Reg_C);
+	I8080::_MVI(_Reg_C);
 }
 void do0x0F() {
-	I8080::_I8080_RRC();
+	I8080::_RRC();
 }
 
 //10
 void do0x10() {
-	I8080::_I8080_();//*NOP
+	I8080::_();				//*NOP
 }
 void do0x11() {
-	I8080::_I8080_LXI(_RP_DE);
+	I8080::_LXI(_RP_DE);
 }
 void do0x12() {
-	I8080::_I8080_STAX(_RP_DE);
+	I8080::_STAX(_RP_DE);
 }
 void do0x13() {
-	I8080::_I8080_INX(_RP_DE);
+	I8080::_INX(_RP_DE);
 }
 void do0x14() {
-	I8080::_I8080_INR(_Reg_D);
+	I8080::_INR(_Reg_D);
 }
 void do0x15() {
-	I8080::_I8080_DCR(_Reg_D);
+	I8080::_DCR(_Reg_D);
 }
 void do0x16() {
-	I8080::_I8080_MVI(_Reg_D);
+	I8080::_MVI(_Reg_D);
 }
 void do0x17() {
-	I8080::_I8080_RAL();
+	I8080::_RAL();
 }
 void do0x18() {
-	I8080::_I8080_();//*NOP
+	I8080::_();				//*NOP
 }
 void do0x19() {
-	I8080::_I8080_DAD(_RP_DE);
+	I8080::_DAD(_RP_DE);
 }
 void do0x1A() {
-	I8080::_I8080_LDAX(_RP_DE);
+	I8080::_LDAX(_RP_DE);
 }
 void do0x1B() {
-	I8080::_I8080_DCX(_RP_DE);
+	I8080::_DCX(_RP_DE);
 }
 void do0x1C() {
-	I8080::_I8080_INR(_Reg_E);
+	I8080::_INR(_Reg_E);
 }
 void do0x1D() {
-	I8080::_I8080_DCR(_Reg_E);
+	I8080::_DCR(_Reg_E);
 }
 void do0x1E() {
-	I8080::_I8080_MVI(_Reg_E);
+	I8080::_MVI(_Reg_E);
 }
 void do0x1F() {
-	I8080::_I8080_RAR();
+	I8080::_RAR();
 }
 
 //20
 void do0x20() {
-	I8080::_I8080_();//*NOP
+	I8080::_();				//*NOP
 }
 void do0x21() {
-	I8080::_I8080_LXI(_RP_HL);
+	I8080::_LXI(_RP_HL);
 }
 void do0x22() {
-	I8080::_I8080_SHLD();
+	I8080::_SHLD();
 }
 void do0x23() {
-	I8080::_I8080_INX(_RP_HL);
+	I8080::_INX(_RP_HL);
 }
 void do0x24() {
-	I8080::_I8080_INR(_Reg_H);
+	I8080::_INR(_Reg_H);
 }
 void do0x25() {
-	I8080::_I8080_DCR(_Reg_H);
+	I8080::_DCR(_Reg_H);
 }
 void do0x26() {
-	I8080::_I8080_MVI(_Reg_H);
+	I8080::_MVI(_Reg_H);
 }
 void do0x27() {
-	I8080::_I8080_DAA();
+	I8080::_DAA();
 }
 void do0x28() {
-	I8080::_I8080_();//*NOP
+	I8080::_();//*NOP
 }
 void do0x29() {
-	I8080::_I8080_DAD(_RP_HL);
+	I8080::_DAD(_RP_HL);
 }
 void do0x2A() {
-	I8080::_I8080_LHLD();
+	I8080::_LHLD();
 }
 void do0x2B() {
-	I8080::_I8080_DCX(_RP_HL);
+	I8080::_DCX(_RP_HL);
 }
 void do0x2C() {
-	I8080::_I8080_INR(_Reg_L);
+	I8080::_INR(_Reg_L);
 }
 void do0x2D() {
-	I8080::_I8080_DCR(_Reg_L);
+	I8080::_DCR(_Reg_L);
 }
 void do0x2E() {
-	I8080::_I8080_MVI(_Reg_L);
+	I8080::_MVI(_Reg_L);
 }
 void do0x2F() {
-	I8080::_I8080_CMA();
+	I8080::_CMA();
 }
 
 
 //30
 void do0x30() {
-	I8080::_I8080_();//*NOP
+	I8080::_();//*NOP
 }
 void do0x31() {
-	I8080::_I8080_LXI(_RP_SP);
+	I8080::_LXI(_RP_SP);
 }
 void do0x32() {
-	I8080::_I8080_STA();
+	I8080::_STA();
 }
 void do0x33() {
-	I8080::_I8080_INX(_RP_SP);
+	I8080::_INX(_RP_SP);
 }
 void do0x34() {
-	I8080::_I8080_INR(_Reg_M);
+	I8080::_INR(_Reg_M);
 }
 void do0x35() {
-	I8080::_I8080_DCR(_Reg_M);
+	I8080::_DCR(_Reg_M);
 }
 void do0x36() {
-	I8080::_I8080_MVI(_Reg_M);
+	I8080::_MVI(_Reg_M);
 }
 void do0x37() {
-	I8080::_I8080_STC();
+	I8080::_STC();
 }
 void do0x38() {
-	I8080::_I8080_();//*NOP
+	I8080::_();//*NOP
 }
 void do0x39() {
-	I8080::_I8080_DAD(_RP_SP);
+	I8080::_DAD(_RP_SP);
 }
 void do0x3A() {
-	I8080::_I8080_LDA();
+	I8080::_LDA();
 }
 void do0x3B() {
-	I8080::_I8080_DCX(_RP_SP);
+	I8080::_DCX(_RP_SP);
 }
 void do0x3C() {
-	I8080::_I8080_INR(_Reg_A);
+	I8080::_INR(_Reg_A);
 }
 void do0x3D() {
-	I8080::_I8080_DCR(_Reg_A);
+	I8080::_DCR(_Reg_A);
 }
 void do0x3E() {
-	I8080::_I8080_MVI(_Reg_A);
+	I8080::_MVI(_Reg_A);
 }
 void do0x3F() {
-	I8080::_I8080_CMC();
+	I8080::_CMC();
 }
 
 
 //40 MOV dest src
 void do0x40() {
-	I8080::_I8080_MOV(_Reg_B, _Reg_B);
+	I8080::_MOV(_Reg_B, _Reg_B);
 }
 void do0x41() {
-	I8080::_I8080_MOV(_Reg_B, _Reg_C);
+	I8080::_MOV(_Reg_B, _Reg_C);
 }
 void do0x42() {
-	I8080::_I8080_MOV(_Reg_B, _Reg_D);
+	I8080::_MOV(_Reg_B, _Reg_D);
 }
 void do0x43() {
-	I8080::_I8080_MOV(_Reg_B, _Reg_E);
+	I8080::_MOV(_Reg_B, _Reg_E);
 }
 void do0x44() {
-	I8080::_I8080_MOV(_Reg_B, _Reg_H);
+	I8080::_MOV(_Reg_B, _Reg_H);
 }
 void do0x45() {
-	I8080::_I8080_MOV(_Reg_B, _Reg_L);
+	I8080::_MOV(_Reg_B, _Reg_L);
 }
 void do0x46() {
-	I8080::_I8080_MOV(_Reg_B, _Reg_M);
+	I8080::_MOV(_Reg_B, _Reg_M);
 }
 void do0x47() {
-	I8080::_I8080_MOV(_Reg_B, _Reg_A);
+	I8080::_MOV(_Reg_B, _Reg_A);
 }
 void do0x48() {
-	I8080::_I8080_MOV(_Reg_C, _Reg_B);
+	I8080::_MOV(_Reg_C, _Reg_B);
 }
 void do0x49() {
-	I8080::_I8080_MOV(_Reg_C, _Reg_C);
+	I8080::_MOV(_Reg_C, _Reg_C);
 }
 void do0x4A() {
-	I8080::_I8080_MOV(_Reg_C, _Reg_D);
+	I8080::_MOV(_Reg_C, _Reg_D);
 }
 void do0x4B() {
-	I8080::_I8080_MOV(_Reg_C, _Reg_E);
+	I8080::_MOV(_Reg_C, _Reg_E);
 }
 void do0x4C() {
-	I8080::_I8080_MOV(_Reg_C, _Reg_H);
+	I8080::_MOV(_Reg_C, _Reg_H);
 }
 void do0x4D() {
-	I8080::_I8080_MOV(_Reg_C, _Reg_L);
+	I8080::_MOV(_Reg_C, _Reg_L);
 }
 void do0x4E() {
-	I8080::_I8080_MOV(_Reg_C, _Reg_M);
+	I8080::_MOV(_Reg_C, _Reg_M);
 }
 void do0x4F() {
-	I8080::_I8080_MOV(_Reg_C, _Reg_A);
+	I8080::_MOV(_Reg_C, _Reg_A);
 }
 
 //50
 void do0x50() {
-	I8080::_I8080_MOV(_Reg_D, _Reg_B);
+	I8080::_MOV(_Reg_D, _Reg_B);
 }
 void do0x51() {
-	I8080::_I8080_MOV(_Reg_D, _Reg_C);
+	I8080::_MOV(_Reg_D, _Reg_C);
 }
 void do0x52() {
-	I8080::_I8080_MOV(_Reg_D, _Reg_D);
+	I8080::_MOV(_Reg_D, _Reg_D);
 }
 void do0x53() {
-	I8080::_I8080_MOV(_Reg_D, _Reg_E);
+	I8080::_MOV(_Reg_D, _Reg_E);
 }
 void do0x54() {
-	I8080::_I8080_MOV(_Reg_D, _Reg_H);
+	I8080::_MOV(_Reg_D, _Reg_H);
 }
 void do0x55() {
-	I8080::_I8080_MOV(_Reg_D, _Reg_L);
+	I8080::_MOV(_Reg_D, _Reg_L);
 }
 void do0x56() {
-	I8080::_I8080_MOV(_Reg_D, _Reg_M);
+	I8080::_MOV(_Reg_D, _Reg_M);
 }
 void do0x57() {
-	I8080::_I8080_MOV(_Reg_D, _Reg_A);
+	I8080::_MOV(_Reg_D, _Reg_A);
 }
 void do0x58() {
-	I8080::_I8080_MOV(_Reg_E, _Reg_B);
+	I8080::_MOV(_Reg_E, _Reg_B);
 }
 void do0x59() {
-	I8080::_I8080_MOV(_Reg_E, _Reg_C);
+	I8080::_MOV(_Reg_E, _Reg_C);
 }
 void do0x5A() {
-	I8080::_I8080_MOV(_Reg_E, _Reg_D);
+	I8080::_MOV(_Reg_E, _Reg_D);
 }
 void do0x5B() {
-	I8080::_I8080_MOV(_Reg_E, _Reg_E);
+	I8080::_MOV(_Reg_E, _Reg_E);
 }
 void do0x5C() {
-	I8080::_I8080_MOV(_Reg_E, _Reg_H);
+	I8080::_MOV(_Reg_E, _Reg_H);
 }
 void do0x5D() {
-	I8080::_I8080_MOV(_Reg_E, _Reg_L);
+	I8080::_MOV(_Reg_E, _Reg_L);
 }
 void do0x5E() {
-	I8080::_I8080_MOV(_Reg_E, _Reg_M);
+	I8080::_MOV(_Reg_E, _Reg_M);
 }
 void do0x5F() {
-	I8080::_I8080_MOV(_Reg_E, _Reg_A);
+	I8080::_MOV(_Reg_E, _Reg_A);
 }
 
 //60
 void do0x60() {
-	I8080::_I8080_MOV(_Reg_H, _Reg_B);
+	I8080::_MOV(_Reg_H, _Reg_B);
 }
 void do0x61() {
-	I8080::_I8080_MOV(_Reg_H, _Reg_C);
+	I8080::_MOV(_Reg_H, _Reg_C);
 }
 void do0x62() {
-	I8080::_I8080_MOV(_Reg_H, _Reg_D);
+	I8080::_MOV(_Reg_H, _Reg_D);
 }
 void do0x63() {
-	I8080::_I8080_MOV(_Reg_H, _Reg_E);
+	I8080::_MOV(_Reg_H, _Reg_E);
 }
 void do0x64() {
-	I8080::_I8080_MOV(_Reg_H, _Reg_H);
+	I8080::_MOV(_Reg_H, _Reg_H);
 }
 void do0x65() {
-	I8080::_I8080_MOV(_Reg_H, _Reg_L);
+	I8080::_MOV(_Reg_H, _Reg_L);
 }
 void do0x66() {
-	I8080::_I8080_MOV(_Reg_H, _Reg_M);
+	I8080::_MOV(_Reg_H, _Reg_M);
 }
 void do0x67() {
-	I8080::_I8080_MOV(_Reg_H, _Reg_A);
+	I8080::_MOV(_Reg_H, _Reg_A);
 }
 void do0x68() {
-	I8080::_I8080_MOV(_Reg_L, _Reg_B);
+	I8080::_MOV(_Reg_L, _Reg_B);
 }
 void do0x69() {
-	I8080::_I8080_MOV(_Reg_L, _Reg_C);
+	I8080::_MOV(_Reg_L, _Reg_C);
 }
 void do0x6A() {
-	I8080::_I8080_MOV(_Reg_L, _Reg_D);
+	I8080::_MOV(_Reg_L, _Reg_D);
 }
 void do0x6B() {
-	I8080::_I8080_MOV(_Reg_L, _Reg_E);
+	I8080::_MOV(_Reg_L, _Reg_E);
 }
 void do0x6C() {
-	I8080::_I8080_MOV(_Reg_L, _Reg_H);
+	I8080::_MOV(_Reg_L, _Reg_H);
 }
 void do0x6D() {
-	I8080::_I8080_MOV(_Reg_L, _Reg_L);
+	I8080::_MOV(_Reg_L, _Reg_L);
 }
 void do0x6E() {
-	I8080::_I8080_MOV(_Reg_L, _Reg_M);
+	I8080::_MOV(_Reg_L, _Reg_M);
 }
 void do0x6F() {
-	I8080::_I8080_MOV(_Reg_L, _Reg_A);
+	I8080::_MOV(_Reg_L, _Reg_A);
 }
 
 //70
 void do0x70() {
-	I8080::_I8080_MOV(_Reg_M, _Reg_B);
+	I8080::_MOV(_Reg_M, _Reg_B);
 }
 void do0x71() {
-	I8080::_I8080_MOV(_Reg_M, _Reg_C);
+	I8080::_MOV(_Reg_M, _Reg_C);
 }
 void do0x72() {
-	I8080::_I8080_MOV(_Reg_M, _Reg_D);
+	I8080::_MOV(_Reg_M, _Reg_D);
 }
 void do0x73() {
-	I8080::_I8080_MOV(_Reg_M, _Reg_E);
+	I8080::_MOV(_Reg_M, _Reg_E);
 }
 void do0x74() {
-	I8080::_I8080_MOV(_Reg_M, _Reg_H);
+	I8080::_MOV(_Reg_M, _Reg_H);
 }
 void do0x75() {
-	I8080::_I8080_MOV(_Reg_M, _Reg_L);
+	I8080::_MOV(_Reg_M, _Reg_L);
 }
 void do0x76() {
-	I8080::_I8080_HLT();
+	I8080::_HLT();
 }
 void do0x77() {
-	I8080::_I8080_MOV(_Reg_M, _Reg_A);
+	I8080::_MOV(_Reg_M, _Reg_A);
 }
 void do0x78() {
-	I8080::_I8080_MOV(_Reg_A, _Reg_B);
+	I8080::_MOV(_Reg_A, _Reg_B);
 }
 void do0x79() {
-	I8080::_I8080_MOV(_Reg_A, _Reg_C);
+	I8080::_MOV(_Reg_A, _Reg_C);
 }
 void do0x7A() {
-	I8080::_I8080_MOV(_Reg_A, _Reg_D);
+	I8080::_MOV(_Reg_A, _Reg_D);
 }
 void do0x7B() {
-	I8080::_I8080_MOV(_Reg_A, _Reg_E);
+	I8080::_MOV(_Reg_A, _Reg_E);
 }
 void do0x7C() {
-	I8080::_I8080_MOV(_Reg_A, _Reg_H);
+	I8080::_MOV(_Reg_A, _Reg_H);
 }
 void do0x7D() {
-	I8080::_I8080_MOV(_Reg_A, _Reg_L);
+	I8080::_MOV(_Reg_A, _Reg_L);
 }
 void do0x7E() {
-	I8080::_I8080_MOV(_Reg_A, _Reg_M);
+	I8080::_MOV(_Reg_A, _Reg_M);
 }
 void do0x7F() {
-	I8080::_I8080_MOV(_Reg_A, _Reg_A);
+	I8080::_MOV(_Reg_A, _Reg_A);
 }
 
 
 //80
 void do0x80() {
-	I8080::_I8080_ADD(_Reg_B);
+	I8080::_ADD(_Reg_B);
 }
 void do0x81() {
-	I8080::_I8080_ADD(_Reg_C);
+	I8080::_ADD(_Reg_C);
 }
 void do0x82() {
-	I8080::_I8080_ADD(_Reg_D);
+	I8080::_ADD(_Reg_D);
 }
 void do0x83() {
-	I8080::_I8080_ADD(_Reg_E);
+	I8080::_ADD(_Reg_E);
 }
 void do0x84() {
-	I8080::_I8080_ADD(_Reg_H);
+	I8080::_ADD(_Reg_H);
 }
 void do0x85() {
-	I8080::_I8080_ADD(_Reg_L);
+	I8080::_ADD(_Reg_L);
 }
 void do0x86() {
-	I8080::_I8080_ADD(_Reg_M);
+	I8080::_ADD(_Reg_M);
 }
 void do0x87() {
-	I8080::_I8080_ADD(_Reg_A);
+	I8080::_ADD(_Reg_A);
 }
 void do0x88() {
-	I8080::_I8080_ADC(_Reg_B);
+	I8080::_ADC(_Reg_B);
 }
 void do0x89() {
-	I8080::_I8080_ADC(_Reg_C);
+	I8080::_ADC(_Reg_C);
 }
 void do0x8A() {
-	I8080::_I8080_ADC(_Reg_D);
+	I8080::_ADC(_Reg_D);
 }
 void do0x8B() {
-	I8080::_I8080_ADC(_Reg_E);
+	I8080::_ADC(_Reg_E);
 }
 void do0x8C() {
-	I8080::_I8080_ADC(_Reg_H);
+	I8080::_ADC(_Reg_H);
 }
 void do0x8D() {
-	I8080::_I8080_ADC(_Reg_L);
+	I8080::_ADC(_Reg_L);
 }
 void do0x8E() {
-	I8080::_I8080_ADC(_Reg_M);
+	I8080::_ADC(_Reg_M);
 }
 void do0x8F() {
-	I8080::_I8080_ADC(_Reg_A);
+	I8080::_ADC(_Reg_A);
 }
 
 //90
 void do0x90() {
-	I8080::_I8080_SUB(_Reg_B);
+	I8080::_SUB(_Reg_B);
 }
 void do0x91() {
-	I8080::_I8080_SUB(_Reg_C);
+	I8080::_SUB(_Reg_C);
 }
 void do0x92() {
-	I8080::_I8080_SUB(_Reg_D);
+	I8080::_SUB(_Reg_D);
 }
 void do0x93() {
-	I8080::_I8080_SUB(_Reg_E);
+	I8080::_SUB(_Reg_E);
 }
 void do0x94() {
-	I8080::_I8080_SUB(_Reg_H);
+	I8080::_SUB(_Reg_H);
 }
 void do0x95() {
-	I8080::_I8080_SUB(_Reg_L);
+	I8080::_SUB(_Reg_L);
 }
 void do0x96() {
-	I8080::_I8080_SUB(_Reg_M);
+	I8080::_SUB(_Reg_M);
 }
 void do0x97() {
-	I8080::_I8080_SUB(_Reg_A);
+	I8080::_SUB(_Reg_A);
 }
 void do0x98() {
-	I8080::_I8080_SBB(_Reg_B);
+	I8080::_SBB(_Reg_B);
 }
 void do0x99() {
-	I8080::_I8080_SBB(_Reg_C);
+	I8080::_SBB(_Reg_C);
 }
 void do0x9A() {
-	I8080::_I8080_SBB(_Reg_D);
+	I8080::_SBB(_Reg_D);
 }
 void do0x9B() {
-	I8080::_I8080_SBB(_Reg_E);
+	I8080::_SBB(_Reg_E);
 }
 void do0x9C() {
-	I8080::_I8080_SBB(_Reg_H);
+	I8080::_SBB(_Reg_H);
 }
 void do0x9D() {
-	I8080::_I8080_SBB(_Reg_L);
+	I8080::_SBB(_Reg_L);
 }
 void do0x9E() {
-	I8080::_I8080_SBB(_Reg_M);
+	I8080::_SBB(_Reg_M);
 }
 void do0x9F() {
-	I8080::_I8080_SBB(_Reg_A);
+	I8080::_SBB(_Reg_A);
 }
 
 //A0
 void do0xA0() {
-	I8080::_I8080_ANA(_Reg_B);
+	I8080::_ANA(_Reg_B);
 }
 void do0xA1() {
-	I8080::_I8080_ANA(_Reg_C);
+	I8080::_ANA(_Reg_C);
 }
 void do0xA2() {
-	I8080::_I8080_ANA(_Reg_D);
+	I8080::_ANA(_Reg_D);
 }
 void do0xA3() {
-	I8080::_I8080_ANA(_Reg_E);
+	I8080::_ANA(_Reg_E);
 }
 void do0xA4() {
-	I8080::_I8080_ANA(_Reg_H);
+	I8080::_ANA(_Reg_H);
 }
 void do0xA5() {
-	I8080::_I8080_ANA(_Reg_L);
+	I8080::_ANA(_Reg_L);
 }
 void do0xA6() {
-	I8080::_I8080_ANA(_Reg_M);
+	I8080::_ANA(_Reg_M);
 }
 void do0xA7() {
-	I8080::_I8080_ANA(_Reg_A);
+	I8080::_ANA(_Reg_A);
 }
 void do0xA8() {
-	I8080::_I8080_XRA(_Reg_B);
+	I8080::_XRA(_Reg_B);
 }
 void do0xA9() {
-	I8080::_I8080_XRA(_Reg_C);
+	I8080::_XRA(_Reg_C);
 }
 void do0xAA() {
-	I8080::_I8080_XRA(_Reg_D);
+	I8080::_XRA(_Reg_D);
 }
 void do0xAB() {
-	I8080::_I8080_XRA(_Reg_E);
+	I8080::_XRA(_Reg_E);
 }
 void do0xAC() {
-	I8080::_I8080_XRA(_Reg_H);
+	I8080::_XRA(_Reg_H);
 }
 void do0xAD() {
-	I8080::_I8080_XRA(_Reg_L);
+	I8080::_XRA(_Reg_L);
 }
 void do0xAE() {
-	I8080::_I8080_XRA(_Reg_M);
+	I8080::_XRA(_Reg_M);
 }
 void do0xAF() {
-	I8080::_I8080_XRA(_Reg_A);
+	I8080::_XRA(_Reg_A);
 }
 
 //B0
 void do0xB0() {
-	I8080::_I8080_ORA(_Reg_B);
+	I8080::_ORA(_Reg_B);
 }
 void do0xB1() {
-	I8080::_I8080_ORA(_Reg_C);
+	I8080::_ORA(_Reg_C);
 }
 void do0xB2() {
-	I8080::_I8080_ORA(_Reg_D);
+	I8080::_ORA(_Reg_D);
 }
 void do0xB3() {
-	I8080::_I8080_ORA(_Reg_E);
+	I8080::_ORA(_Reg_E);
 }
 void do0xB4() {
-	I8080::_I8080_ORA(_Reg_H);
+	I8080::_ORA(_Reg_H);
 }
 void do0xB5() {
-	I8080::_I8080_ORA(_Reg_L);
+	I8080::_ORA(_Reg_L);
 }
 void do0xB6() {
-	I8080::_I8080_ORA(_Reg_M);
+	I8080::_ORA(_Reg_M);
 }
 void do0xB7() {
-	I8080::_I8080_ORA(_Reg_A);
+	I8080::_ORA(_Reg_A);
 }
 void do0xB8() {
-	I8080::_I8080_CMP(_Reg_B);
+	I8080::_CMP(_Reg_B);
 }
 void do0xB9() {
-	I8080::_I8080_CMP(_Reg_C);
+	I8080::_CMP(_Reg_C);
 }
 void do0xBA() {
-	I8080::_I8080_CMP(_Reg_D);
+	I8080::_CMP(_Reg_D);
 }
 void do0xBB() {
-	I8080::_I8080_CMP(_Reg_E);
+	I8080::_CMP(_Reg_E);
 }
 void do0xBC() {
-	I8080::_I8080_CMP(_Reg_H);
+	I8080::_CMP(_Reg_H);
 }
 void do0xBD() {
-	I8080::_I8080_CMP(_Reg_L);
+	I8080::_CMP(_Reg_L);
 }
 void do0xBE() {
-	I8080::_I8080_CMP(_Reg_M);
+	I8080::_CMP(_Reg_M);
 }
 void do0xBF() {
-	I8080::_I8080_CMP(_Reg_A);
+	I8080::_CMP(_Reg_A);
 }
 
 //C0
 void do0xC0() {
-	I8080::_I8080_RCCC(B000);
+	I8080::_RCCC(B000);
 }
 void do0xC1() {
-	I8080::_I8080_POP(_RP_BC);
+	I8080::_POP(_RP_BC);
 }
 void do0xC2() {
-	I8080::_I8080_JCCC(B000);
+	I8080::_JCCC(B000);
 }
 void do0xC3() {
-	I8080::_I8080_JMP();
+	I8080::_JMP();
 }
 void do0xC4() {
-	I8080::_I8080_CCCC(B000);
+	I8080::_CCCC(B000);
 }
 void do0xC5() {
-	I8080::_I8080_PUSH(_RP_BC);
+	I8080::_PUSH(_RP_BC);
 }
 void do0xC6() {
-	I8080::_I8080_ADI();
+	I8080::_ADI();
 }
 void do0xC7() {
-	I8080::_I8080_RST(0);
+	I8080::_RST(0);
 }
 void do0xC8() {
-	I8080::_I8080_RCCC(B001);
+	I8080::_RCCC(B001);
 }
 void do0xC9() {
-	I8080::_I8080_RET();
+	I8080::_RET();
 }
 void do0xCA() {
-	I8080::_I8080_JCCC(B001);
+	I8080::_JCCC(B001);
 }
 void do0xCB() {
-	I8080::_I8080_JMP();
+	I8080::_JMP();
 }
 void do0xCC() {
-	I8080::_I8080_CCCC(B001);
+	I8080::_CCCC(B001);
 }
 void do0xCD() {
-	I8080::_I8080_CALL();
+	I8080::_CALL();
 }
 void do0xCE() {
-	I8080::_I8080_ACI();
+	I8080::_ACI();
 }
 void do0xCF() {
-	I8080::_I8080_RST(1);
+	I8080::_RST(1);
 }
 
 //D0
 void do0xD0() {
-	I8080::_I8080_RCCC(B010);
+	I8080::_RCCC(B010);
 }
 void do0xD1() {
-	I8080::_I8080_POP(_RP_DE);
+	I8080::_POP(_RP_DE);
 }
 void do0xD2() {
-	I8080::_I8080_JCCC(B010);
+	I8080::_JCCC(B010);
 }
 void do0xD3() {
-	I8080::_I8080_OUT();
+	I8080::_OUT();
 }
 void do0xD4() {
-	I8080::_I8080_CCCC(B010);
+	I8080::_CCCC(B010);
 }
 void do0xD5() {
-	I8080::_I8080_PUSH(_RP_DE);
+	I8080::_PUSH(_RP_DE);
 }
 void do0xD6() {
-	I8080::_I8080_SUI();
+	I8080::_SUI();
 }
 void do0xD7() {
-	I8080::_I8080_RST(2);
+	I8080::_RST(2);
 }
 void do0xD8() {
-	I8080::_I8080_RCCC(B011);
+	I8080::_RCCC(B011);
 }
 void do0xD9() {
-	I8080::_I8080_RET();
+	I8080::_RET();
 }
 void do0xDA() {
-	I8080::_I8080_JCCC(B011);
+	I8080::_JCCC(B011);
 }
 void do0xDB() {
-	I8080::_I8080_IN();
+	I8080::_IN();
 }
 void do0xDC() {
-	I8080::_I8080_CCCC(B011);
+	I8080::_CCCC(B011);
 }
 void do0xDD() {
-	I8080::_I8080_CALL();
+	I8080::_CALL();
 }
 void do0xDE() {
-	I8080::_I8080_SBI();
+	I8080::_SBI();
 }
 void do0xDF() {
-	I8080::_I8080_RST(3);
+	I8080::_RST(3);
 }
 
 //E0
 void do0xE0() {
-	I8080::_I8080_RCCC(B100);
+	I8080::_RCCC(B100);
 }
 void do0xE1() {
-	I8080::_I8080_POP(_RP_HL);
+	I8080::_POP(_RP_HL);
 }
 void do0xE2() {
-	I8080::_I8080_JCCC(B100);
+	I8080::_JCCC(B100);
 }
 void do0xE3() {
-	I8080::_I8080_XTHL();
+	I8080::_XTHL();
 }
 void do0xE4() {
-	I8080::_I8080_CCCC(B100);
+	I8080::_CCCC(B100);
 }
 void do0xE5() {
-	I8080::_I8080_PUSH(_RP_HL);
+	I8080::_PUSH(_RP_HL);
 }
 void do0xE6() {
-	I8080::_I8080_ANI();
+	I8080::_ANI();
 }
 void do0xE7() {
-	I8080::_I8080_RST(4);
+	I8080::_RST(4);
 }
 void do0xE8() {
-	I8080::_I8080_RCCC(B101);
+	I8080::_RCCC(B101);
 }
 void do0xE9() {
-	I8080::_I8080_PCHL();
+	I8080::_PCHL();
 }
 void do0xEA() {
-	I8080::_I8080_JCCC(B101);
+	I8080::_JCCC(B101);
 }
 void do0xEB() {
-	I8080::_I8080_XCHG();
+	I8080::_XCHG();
 }
 void do0xEC() {
-	I8080::_I8080_CCCC(B101);
+	I8080::_CCCC(B101);
 }
 void do0xED() {
-	I8080::_I8080_CALL();
+	I8080::_CALL();
 }
 void do0xEE() {
-	I8080::_I8080_XRI();
+	I8080::_XRI();
 }
 void do0xEF() {
-	I8080::_I8080_RST(5);
+	I8080::_RST(5);
 }
 
 //F0
 void do0xF0() {
-	I8080::_I8080_RCCC(B110);
+	I8080::_RCCC(B110);
 }
 void do0xF1() {
-	I8080::_I8080_POP(_RP_AF);
+	I8080::_POP(_RP_AF);
 }
 void do0xF2() {
-	I8080::_I8080_JCCC(B110);
+	I8080::_JCCC(B110);
 }
 void do0xF3() {
-	I8080::_I8080_DI();
+	I8080::_DI();
 }
 void do0xF4() {
-	I8080::_I8080_CCCC(B110);
+	I8080::_CCCC(B110);
 }
 void do0xF5() {
-	I8080::_I8080_PUSH(_RP_AF);
+	I8080::_PUSH(_RP_AF);
 }
 void do0xF6() {
-	I8080::_I8080_ORI();
+	I8080::_ORI();
 }
 void do0xF7() {
-	I8080::_I8080_RST(6);
+	I8080::_RST(6);
 }
 void do0xF8() {
-	I8080::_I8080_RCCC(B111);
+	I8080::_RCCC(B111);
 }
 void do0xF9() {
-	I8080::_I8080_SPHL();
+	I8080::_SPHL();
 }
 void do0xFA() {
-	I8080::_I8080_JCCC(B111);
+	I8080::_JCCC(B111);
 }
 void do0xFB() {
-	I8080::_I8080_EI();
+	I8080::_EI();
 }
 void do0xFC() {
-	I8080::_I8080_CCCC(B111);
+	I8080::_CCCC(B111);
 }
 void do0xFD() {
-	I8080::_I8080_CALL();
+	I8080::_CALL();
 }
 void do0xFE() {
-	I8080::_I8080_CPI();
+	I8080::_CPI();
 }
 void do0xFF() {
-	I8080::_I8080_RST(7);
+	I8080::_RST(7);
 }
 
-typedef void(*CmdFunction) ();
+typedef void(*EXEC) ();
 
 // array of function pointers
-const CmdFunction doCmdArray[] PROGMEM =
+const EXEC MAP_ARR[] PROGMEM =
 {
 	//0
 	do0x00,

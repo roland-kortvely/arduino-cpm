@@ -1,12 +1,10 @@
 /**
- * Copyright (c) 2018 Roland Körtvely <roland.kortvely@gmail.com>
+ * Copyright (c) 2018 Roland KÃ¶rtvely <roland.kortvely@gmail.com>
  */
 
 
 #include "CONFIG.h"
-#include "CONSOLE.h"
 #include "SD.h"
-#include "MEM.h"
 
 Sd2Card SD::sd;
 
@@ -15,8 +13,6 @@ uint8_t SD::_dsk_buffer[SD_BLK_SIZE];
 
 void SD::init()
 {
-	CONSOLE::block("SD::init");
-
 	uint32_t _cardsize;
 
 	//SD card init
@@ -25,8 +21,6 @@ void SD::init()
 		_cardsize = SD::sd.cardSize();
 
 		if (_cardsize != 0) {
-			CONSOLE::ok();
-
 			/*
 			Serial.print(F("CARD SIZE: "));
 			Serial.print(_cardsize);
@@ -41,21 +35,15 @@ void SD::init()
 
 //block read from SD
 uint8_t SD::readSD(uint32_t blk, uint16_t offset) {
-	uint8_t res;
-	res = SD::sd.readBlock(blk, SD::_buffer, offset);
-	return res;
+	return SD::sd.readBlock(blk, SD::_buffer, offset);
 }
 
 //block write to SD
 uint8_t SD::writeSD(uint32_t blk) {
-	uint8_t res;
-	res = SD::sd.writeBlock(blk, SD::_buffer);
-	return res;
+	return SD::sd.writeBlock(blk, SD::_buffer);
 }
 
 //erase SD
 uint8_t SD::eraseSD(uint32_t blk, uint32_t len) {
-	uint8_t res;
-	res = SD::sd.erase(blk, blk + len - 1);
-	return res;
+	return SD::sd.erase(blk, blk + len - 1);
 }

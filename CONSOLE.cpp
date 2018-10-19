@@ -5,6 +5,8 @@
  */
 
 
+#include <PS2Keyboard.h>
+
 #include "CONFIG.h"
 #include "CONSOLE.h"
 
@@ -16,6 +18,18 @@ char CONSOLE::inChar;
 int CONSOLE::mon_ptr = 0;
 
 boolean CONSOLE::MON = true;
+
+PS2Keyboard CONSOLE::keyboard;
+
+void CONSOLE::init()
+{
+	Serial.begin(COM_BAUD);
+
+	while (!Serial) {}
+
+	CONSOLE::clrscr();
+	CONSOLE::welcome();
+}
 
 void CONSOLE::clrscr()
 {
@@ -155,7 +169,13 @@ void CONSOLE::error(String s = "ERROR!") {
 
 	Serial.print(F("\t"));
 	Serial.println(s);
-	while(1) {}								//TODO: RESTART
+}
+
+
+void CONSOLE::warning(String s = "WARNING!") {
+	CONSOLE::color(5);
+	Serial.println(s);
+	CONSOLE::color(9);
 }
 
 boolean CONSOLE::con_ready() {
@@ -171,7 +191,7 @@ boolean CONSOLE::con_ready() {
 		break;
 	case 1: //PS/2 keyboard
 			//cli();
-		if (kbd_chars > 0) {
+		if (CONSOLE::keyboard.available() > 0) {
 			res = true;
 		}
 		else {
@@ -185,8 +205,9 @@ boolean CONSOLE::con_ready() {
 
 //console input/output procedures
 char CONSOLE::con_read() {
-	char key;
-	key = '\0';
+
+	char key = '\0';
+
 	switch (CON_IN) {
 	case 0: //terminal
 		if (Serial.available() > 0) {
@@ -197,7 +218,12 @@ char CONSOLE::con_read() {
 		}
 		break;
 	case 1: //PS/2 keyboard
-	  //
+		if (CONSOLE::keyboard.available() > 0) {
+			key = CONSOLE::keyboard.read();
+			if (!MON && ((uint8_t)key == PS2_ESC)) {
+				CONFIG::exitFlag = true;
+			}
+		}
 		break;
 	}
 	return key;

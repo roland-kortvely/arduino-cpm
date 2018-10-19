@@ -6,6 +6,7 @@
 #include "CONFIG.h"
 #include "EEPROM.h"
 #include "CONSOLE.h"
+#include "GPU.h"
 #include "MEM.h"
 #include "FDD.h"
 
@@ -19,7 +20,7 @@ uint16_t FDD::FDD_REG_DMA = 0;			//DMA address register
 
 void FDD::init()
 {
-	CONSOLE::block("FDD::init");
+	GPU::block("FDD::init");
 
 	//disks mount
 	for (uint8_t k = 0; k < FDD_NUM; k++) {
@@ -28,5 +29,5 @@ void FDD::init()
 
 	CONFIG::SENSE_SW = EEPROM.read(MEM::EEPROM_SENSE_SW);
 
-	CONSOLE::ok();
+	GPU::ok();
 }

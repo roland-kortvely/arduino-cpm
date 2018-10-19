@@ -4,6 +4,7 @@
 
 
 #include "CONFIG.h"
+#include "GPU.h"
 #include "CONSOLE.h"
 #include "i8080.h"
 #include "CMD.h"
@@ -31,16 +32,16 @@ volatile uint8_t  I8080::_IR;		//instruction register
 
 void I8080::init()
 {
-	CONSOLE::color(9);
+	GPU::color(9);
 
 	I8080::_SP = SP_INIT;			//stack init
 
 	delay(1000);					//just for UX		TODO: ASYNC delay
 
-	CONSOLE::clrscr();				//clear screen
+	GPU::clrscr();					//clear screen
 	CONSOLE::xy(MON_Y, 0);			//cursor positioning
 
-	CONSOLE::print(">");
+	GPU::print(">");
 }
 
 void I8080::boot() {
@@ -74,26 +75,26 @@ void I8080::boot() {
 					if (CONSOLE::mon_ptr > 0) {
 						CONSOLE::mon_ptr--;
 						CONSOLE::mon_buffer[CONSOLE::mon_ptr] = '\0';
-						CONSOLE::write(CONSOLE::inChar);
-						CONSOLE::print(" ");
-						CONSOLE::write(CONSOLE::inChar);
+						GPU::write(CONSOLE::inChar);
+						GPU::print(" ");
+						GPU::write(CONSOLE::inChar);
 					}
 				}
 				else {
 					CONSOLE::mon_buffer[CONSOLE::mon_ptr] = CONSOLE::inChar;
 					CONSOLE::mon_ptr++;
-					CONSOLE::write(CONSOLE::inChar);
+					GPU::write(CONSOLE::inChar);
 				}
 			}
 		} while ((CONSOLE::inChar != '\r') && (CONSOLE::inChar != '\n') && (CONSOLE::mon_ptr < MON_BUFFER_SIZE));
 
-		CONSOLE::println();
+		GPU::println();
 		CONSOLE::mon_ptr = 0;
 
 		CMD::exec();
 
 		CONSOLE::xy(MON_Y, 0);
-		CONSOLE::print(">");
+		GPU::print(">");
 		CONSOLE::clrend();
 	}
 }

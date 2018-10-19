@@ -13,19 +13,29 @@
 #endif
 
 //IO
-constexpr auto LED_delay = 3;
-constexpr auto LED_pin   = 13;								//D9 pin - LED
-constexpr auto IN_pin    = 8;								//D8 pin - IN
-constexpr auto OUT_pin   = 7;								//D7 pin - OUT
-constexpr auto IN_PORT   = 0xF0;							//IN port
-constexpr auto OUT_PORT  = 0xF1;							//OUT port
+constexpr auto COM_BAUD = 9600;
 
- //BOOT area
+constexpr auto LED_pin   = 22;								//LED
+constexpr auto IN_pin    = 23;								//IN
+constexpr auto OUT_pin   = 24;								//OUT
+constexpr auto SS_SD_pin = 12;							    //SD CARD CS/SS pin
+
+constexpr auto IN_PORT   = 0xF0;							//IN port	| CP/M call
+constexpr auto OUT_PORT  = 0xF1;							//OUT port	| CP/M call
+
+constexpr auto LCD_ROTATON = 3;								//LCD landscape rotation
+
+constexpr auto PS2_DATA = 19;
+constexpr auto PS2_CLK  = 18;
+
+constexpr auto CON_IN = 1;									// 0 - console | 1 - PS2
+
+//BOOT area
 constexpr auto SEC_BUF = 0x80;								//sector buffer
 
 //BIOS
 constexpr auto CPMSYS_COUNT = 11;							//??
-constexpr auto CPMSYS_LEN	= 5632;
+constexpr auto CPMSYS_LEN	= 5632;							//??
 constexpr auto CPMSYS_START = 0x100;						//CPM.SYS SD offset
 constexpr auto CPMSYS_CS	= 0x1A;							//CPM checksum
 
@@ -36,13 +46,11 @@ constexpr auto CPM_LBL_LEN		= 36;
 constexpr auto CPM_SERIAL_START = 0x328;
 constexpr auto CPM_SERIAL_LEN	= 6;
 
-constexpr auto SS_SD_pin   = 10;							//SS pin (D10)
 constexpr auto SD_BLK_SIZE = 128;							//SD block size
 
 constexpr auto FDD_NUM			= 4;
 constexpr auto SD_DISKS_OFFSET	= 0x0001000;
 constexpr auto SD_DISK_SIZE		= 0x0001000;
-constexpr auto COM_BAUD			= 9600;
 constexpr auto CPM_EMPTY		= 0xE5;						//empty byte (disk)
 //constexpr auto SECTOR_SIZE = 128;
 constexpr auto TRACK_SIZE = 26;
@@ -51,9 +59,9 @@ constexpr auto FDD_SIZE = TRACK_SIZE * DISK_SIZE;			//sectors
 constexpr auto DISK_SUCCESS = 0;
 constexpr auto DISK_ERROR = 1;
 
-constexpr auto MEM_SIZE = 512;								//Sys RAM
+constexpr auto MEM_SIZE = 64;								//Sys RAM
 constexpr auto MEM_MAX = (MEM_SIZE - 1) * 1024U + 1023U;	//max sys RAM addr
-constexpr auto RAM_SIZE = 512;								//RAM Size
+constexpr auto RAM_SIZE = 64;								//RAM Size
 
 constexpr auto SD_MEM_OFFSET = 0x070000;					//memory offset in SD-card
 constexpr auto MEMTEST_TABLE_SIZE = 33;
@@ -120,7 +128,6 @@ constexpr auto _ENDDAT = _CHK03 + 16;	//END OF DATA AREA
 constexpr auto SENSE_SW_PORT = 0xFF;
 
 constexpr auto MON_Y = 15;
-constexpr auto CON_IN = 0;				// 0 - console | 1 - PS2
 constexpr auto KBD_BUFFER_SIZE = 16;	//console input buffer size
 
 constexpr auto BS_KEY = 0x08;
@@ -168,8 +175,6 @@ public:
 	static uint32_t RAM_AVAIL;
 
 	static bool exitFlag;
-
-	static void init();
 };
 
 #endif

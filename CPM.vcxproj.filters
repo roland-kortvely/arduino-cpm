@@ -69,6 +69,12 @@
     <ClInclude Include="i8080_helper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="LCD.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GPU.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="IPL.cpp">
@@ -105,6 +111,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="BIOS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LCD.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GPU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

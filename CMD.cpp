@@ -2,7 +2,8 @@
  * Copyright (c) 2018 Roland Körtvely <roland.kortvely@gmail.com>
  */
 
-
+/*
+#include "GPU.h"
 #include "CMD.h"
 #include "CONFIG.h"
 #include "CONSOLE.h"
@@ -12,6 +13,7 @@
 #include "i8080.h"
 #include "BIOS.h"
 #include "IPL.h"
+#include "MEM.h"
 
 void CMD::exec()
 {
@@ -37,18 +39,23 @@ void CMD::exec()
 		return;
 	}
 
-	CONSOLE::color(1);
-	CONSOLE::print(F("INVALID COMMAND! {"));
-	CONSOLE::print(CONSOLE::mon_buffer);
-	CONSOLE::println("}");
-	CONSOLE::color(9);
+	if (CONSOLE::mon_buffer[0] == 'B') {
+		CMD::transfer();
+		return;
+	}
+
+	GPU::color(1);
+	GPU::print(F("INVALID COMMAND! {"));
+	GPU::print(CONSOLE::mon_buffer);
+	GPU::println("}");
+	GPU::color(9);
 }
 
 void CMD::BIOS() {
 	CONSOLE::clrscr();						//clear screen
 
 	if (!BIOS::IPL()) {						//initial loader
-		CONSOLE::error("BIOS::IPL FAILURE!");
+		GPU::error("BIOS::IPL FAILURE!");
 	}
 
 	CONFIG::BIOS_INT = true;				//BIOS intercept enabled
@@ -61,12 +68,12 @@ void CMD::BIOS() {
 }
 
 void CMD::MEM_TEST() {
-	CONSOLE::color(2);
+	GPU::color(2);
 	CONSOLE::savecur();
 	CONSOLE::xy(0, 0);
 	RAM::MEM_TEST();
 	CONSOLE::loadcur();
-	CONSOLE::color(9);
+	GPU::color(9);
 }
 
 void CMD::status() {
@@ -85,19 +92,19 @@ void CMD::format() {
 	driveno = 0xFF;
 
 	switch (CONSOLE::mon_buffer[1]) {
-		case 'A'...char(uint8_t('A') + FDD_NUM - 1) : driveno = (uint8_t(CONSOLE::mon_buffer[1]) - uint8_t('A'));
+		case 'A' ... char(uint8_t('A') + FDD_NUM - 1) : driveno = (uint8_t(CONSOLE::mon_buffer[1]) - uint8_t('A'));
 			break;
 	}
 
 	if (driveno == 0xFF) {
-		CONSOLE::color(1);
-		CONSOLE::println(F("Invalid disk!"));
-		CONSOLE::color(9);
+		GPU::color(1);
+		GPU::println(F("Invalid disk!"));
+		GPU::color(9);
 		return;
 	}
 
-	CONSOLE::println(F("Format disk"));
-	CONSOLE::println();
+	GPU::println(F("Format disk"));
+	GPU::println();
 
 	//format
 	start = FDD::SD_FDD_OFFSET[driveno];
@@ -106,11 +113,62 @@ void CMD::format() {
 	}
 
 	for (uint32_t i = 0; i < DISK_SIZE * TRACK_SIZE; i++) {
-		CONSOLE::print("\r");
-		CONSOLE::print(F("SECTOR "));
-		Serial.print(i, DEC);
+		GPU::print("\r");
+		GPU::print(F("SECTOR "));
+		GPU::print(String(i, DEC));
 		res = SD::sd.writeBlock(i + start, SD::_dsk_buffer);
 	}
 
-	CONSOLE::ok();
+	GPU::ok();
 }
+
+void CMD::transfer() {
+
+	if (!CONSOLE::hexcheck(1, 4)) {
+		GPU::error("HEX CHECK");
+		return;
+	}
+
+	boolean _EOF = false;
+
+	uint32_t adr = CONSOLE::kbd2word(1);
+	uint16_t tmp_word = MEM::_AB;
+
+	CONSOLE::con_flush();
+
+
+	GPU::warning(F("Ready to receive file..."));
+	//Serial.print(F("Address: "));
+	//Serial.println(adr, HEX);
+
+	uint16_t count = 0;
+	do {
+
+		CONSOLE::inChar = '\0';
+		if (CONSOLE::con_ready()) {
+
+			CONSOLE::inChar = CONSOLE::con_read();
+			if (CONSOLE::inChar == CTRL_SLASH_KEY) {
+				_EOF = true;
+				continue;
+			}
+
+			MEM::_AB = adr;
+			MEM::_DB = uint8_t(CONSOLE::inChar);
+			MEM::_WR();
+			adr++;
+			count++;
+			//Serial.print(CONSOLE::inChar);								//TODO: DEBUG
+		}
+
+	} while (!_EOF);
+
+	GPU::warning("TRANSFER DONE");
+
+	MEM::_AB = tmp_word;											//RETURN BACK
+	MEM::_RD();
+
+	GPU::print(String(count, DEC));
+	GPU::println(F(" byte(s) were successfully received"));
+}
+*/

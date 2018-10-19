@@ -2,20 +2,36 @@
  * Copyright (c) 2018 Roland Körtvely <roland.kortvely@gmail.com>
  */
 
-
+#include "GPU.h"
 #include "CONFIG.h"
 #include "MEM.h"
 #include "i8080.h"
+#include "i8080_helper.h"
 #include "SD.h"
 #include "FDD.h"
 #include "BIOS.h"
 #include "IO.h"
-#include "CONSOLE.h"
+#include "IPL.h"
+
+void BIOS::BOOT()
+{
+	GPU::clrscr();						//clear screen
+
+	if (!BIOS::IPL()) {						//initial loader
+		GPU::error("BIOS::IPL FAILURE!");
+	}
+
+	CONFIG::BIOS_INT = true;				//BIOS intercept enabled
+	//CONSOLE::MON = false;
+
+	BIOS::call(_BIOS);						//JMP TO BIOS
+
+	//CONSOLE::MON = true;
+}
 
 bool BIOS::IPL()
 {
-
-	Serial.println(F("IPL PRECHECK"));
+	GPU::println(F("IPL PRECHECK"));
 
 	uint16_t i;
 
@@ -40,10 +56,11 @@ bool BIOS::IPL()
 	Serial.print(_BIOS_LO, HEX);
 	Serial.print(" ... ");
 	Serial.println(_BIOS_HI, HEX);
-	Serial.println("");
-	Serial.println(F("IPL"));
+	//GPU::println("");
+	//GPU::println(F("IPL"));
 
-	I8080::I8080::_SP = SP_INIT;
+	I8080::_SP = SP_INIT;
+
 	FDD::FDD_REG_DRV = 0;
 	FDD::FDD_REG_TRK = 0;
 	FDD::FDD_REG_SEC = 1;
@@ -77,38 +94,38 @@ bool BIOS::IPL()
 		}
 	}
 
-	Serial.println("");
-	Serial.print(F("Checksum: "));
+	GPU::println("");
+	GPU::print(F("Checksum: "));
 	sprintf(hex, "%02X", checksum);
-	Serial.print(hex);
-	Serial.print(" ");
+	GPU::print(hex);
+	GPU::print(" ");
 
 	if (checksum != CPMSYS_CS) {
 
-		CONSOLE::error(F("\nCPM.SYS CHECKSUM ERROR!"));
+		GPU::error(F("\nCPM.SYS CHECKSUM ERROR!"));
 		success = false;
 
 		return success;
 	}
 	else {
-		Serial.println(F("O.K.!"));
+		GPU::println(F("O.K.!"));
 		success = true;
 
 		for (uint16_t j = CPM_LBL_START; j < (CPM_LBL_START + CPM_LBL_LEN); j++) {
 			MEM::_AB = CBASE + j;
 			MEM::_RD();
-			Serial.write(MEM::_DB);
+			GPU::write(MEM::_DB);
 		}
 
-		Serial.println("");
-		Serial.print(F("Serial: "));
+		GPU::println("");
+		GPU::print(F("Serial: "));
 		for (uint16_t j = CPM_SERIAL_START; j < (CPM_SERIAL_START + CPM_SERIAL_LEN); j++) {
 			MEM::_AB = CBASE + j;
 			MEM::_RD();
 			sprintf(hex, "%02X", MEM::_DB);
-			Serial.print(hex);
+			GPU::print(hex);
 		}
-		Serial.println("");
+		GPU::println("");
 
 
 		i = _DPBASE;
@@ -255,12 +272,44 @@ bool BIOS::IPL()
 	return success;
 }
 
+void BIOS::call(word addr)
+{
+	byte cmd;
+	bool exe_flag;
+
+	CONFIG::exitFlag = false;
+	I8080::_PC = addr;
+
+	do
+	{
+		MEM::_AB = I8080::_PC;
+
+		if (CONFIG::exitFlag) { break; }							//go to monitor
+
+		if (BIOS::INT()) {
+			break;
+		}
+
+		MEM::_RD();													//(AB) -> INSTR  instruction fetch
+		I8080::_IR = MEM::_DB;
+
+		((EXEC)pgm_read_word(&MAP_ARR[I8080::_IR])) ();				//decode
+
+	} while (true);
+
+	if (MEM::MEM_ERR) {
+		MEM::MEM_ERR = false;
+		GPU::clrscr();
+		GPU::error("MEMORY ERROR!");
+	}
+}
+
 bool BIOS::INT() {
 
 	bool exe_flag = true;
 
 	/*
-	if (I8080::I8080::_PC == FBASE) {
+	if (I8080::_PC == FBASE) {
 		if (DEBUG)
 		{
 			color(3);
@@ -273,78 +322,97 @@ bool BIOS::INT() {
 		}
 	}*/
 
-	if ((I8080::I8080::_PC >= _BIOS_LO) && (I8080::I8080::_PC < _BIOS_HI) && CONFIG::BIOS_INT) {
-		switch (I8080::I8080::_PC) {
+	if ((I8080::_PC >= _BIOS_LO) && (I8080::_PC < _BIOS_HI) && CONFIG::BIOS_INT) {
+
+		switch (I8080::_PC) {
+
 		case _BIOS + 0U://BOOT
 			BIOS::_BIOS_BOOT();
 			exe_flag = false;
 			break;
+
 		case _BIOS + 3U://WBOOT
 			BIOS::_BIOS_WBOOT();
 			exe_flag = false;
 			break;
+
 			//ASCII 7 ‚ 0
 			//CTRL-Z 0x1A
 		case _BIOS + 6U://CONST
 			BIOS::_BIOS_CONST();
 			exe_flag = false;
 			break;
+
 		case _BIOS + 9U://CONIN
 			BIOS::_BIOS_CONIN();
 			exe_flag = false;
 			break;
+
 		case _BIOS + 0xcU://CONOUT
 			BIOS::_BIOS_CONOUT();
 			exe_flag = false;
 			break;
+
 		case _BIOS + 0xfU://LIST
 			BIOS::_BIOS_LIST();
 			exe_flag = false;
 			break;
+
 		case _BIOS + 0x12U://PUNCH
 			BIOS::_BIOS_PUNCH();
 			exe_flag = false;
 			break;
+
 		case _BIOS + 0x15U://READER 
 			BIOS::_BIOS_READER();
 			exe_flag = false;
 			break;
+
 		case _BIOS + 0x2dU://LISTST
 			BIOS::_BIOS_LISTST();
 			exe_flag = false;
 			break;
+
 		case _BIOS + 0x18U://HOME
 			BIOS::_BIOS_HOME();
 			exe_flag = false;
 			break;
+
 		case _BIOS + 0x1bU://SELDSK
 			BIOS::_BIOS_SELDSK();
 			exe_flag = false;
 			break;
+
 		case _BIOS + 0x1eU://SETTRK
 			BIOS::_BIOS_SETTRK();
 			exe_flag = false;
 			break;
+
 		case _BIOS + 0x21U://SETSEC
 			BIOS::_BIOS_SETSEC();
 			exe_flag = false;
 			break;
+
 		case _BIOS + 0x24U://SETDMA
 			BIOS::_BIOS_SETDMA();
 			exe_flag = false;
 			break;
+
 		case _BIOS + 0x27U://READ
 			BIOS::_BIOS_READ();
 			exe_flag = false;
 			break;
+
 		case _BIOS + 0x2aU://WRITE
 			BIOS::_BIOS_WRITE();
 			exe_flag = false;
 			break;
+
 		case _BIOS + 0x30U://SECTRAN
 			BIOS::_BIOS_SECTRAN();
 			exe_flag = false;
 			break;
+
 		default:
 			exe_flag = false;
 			CONFIG::exitFlag = true;	//BIOS error
@@ -396,31 +464,40 @@ void BIOS::_GOCPM(boolean jmp) {
 }
 
 void BIOS::_BOOT() {
-	//message BOOT
 
-	Serial.println("");
-	Serial.println(F("BOOT"));
+	GPU::color(2);
+	GPU::lnblockln(F("BIOS {BOOT}"));
+	GPU::color(9);
+	delay(1000);
 
 	MEM::_AB = IOBYTE;
 	MEM::_DB = 0x00;
-	MEM::_WR();//IOBYTE clear
+	MEM::_WR();					//IOBYTE clear
 	MEM::_AB = CDISK;
 	MEM::_DB = 0x00;
-	MEM::_WR();//select disk 0
+	MEM::_WR();					//select disk 0
+
+
+
 	//INITIALIZE AND GO TO CP/M
 	_GOCPM(true);
 }
 
 void BIOS::_WBOOT() {
+
 	boolean load;
-	//message WBOOT
-	Serial.println("");
-	Serial.println(F("WBOOT"));
-	//USE SPACE BELOW BUFFER FOR STACK
+
+	GPU::color(2);
+	GPU::lnblockln(F("BIOS {WBOOT}"));
+	GPU::color(9);
+	delay(1000);
+
+	//BIOS IPL
 	I8080::_SP = 0x80;
 	do {
 		load = BIOS::IPL();
 	} while (!load);
+
 	//INITIALIZE AND GO TO CP/M
 	_GOCPM(true);
 }
@@ -434,7 +511,6 @@ void BIOS::_BIOS_WBOOT() {
 	_WBOOT();
 }
 
-
 void BIOS::_BIOS_CONST() {
 	MEM::_AB = word(SIOA_CON_PORT_STATUS, SIOA_CON_PORT_STATUS);
 	IO::_INPORT();
@@ -447,14 +523,12 @@ void BIOS::_BIOS_CONST() {
 	BIOS::_BIOS_RET();
 }
 
-
 void BIOS::_BIOS_CONIN() {
 	MEM::_AB = word(SIOA_CON_PORT_DATA, SIOA_CON_PORT_DATA);
 	IO::_INPORT();
 	_rA = MEM::_DB & B01111111;
 	BIOS::_BIOS_RET();
 }
-
 
 void BIOS::_BIOS_CONOUT() {
 	MEM::_AB = SIOA_CON_PORT_DATA;

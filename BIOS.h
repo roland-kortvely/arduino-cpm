@@ -7,15 +7,17 @@
 #define _BIOS_h
 
 #if defined(ARDUINO) && ARDUINO >= 100
-	#include "arduino.h"
+#include "arduino.h"
 #else
-	#include "WProgram.h"
+#include "WProgram.h"
 #endif
 
 class BIOS
 {
- public:
+public:
+	static void BOOT();
 	static bool IPL();
+	static void call(word addr);
 	static bool INT();
 
 	static void _GOCPM(boolean jmp);
@@ -43,4 +45,3 @@ class BIOS
 };
 
 #endif
-

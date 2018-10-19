@@ -5,22 +5,22 @@
 
 #include "RAM.h"
 #include "CONFIG.h"
-#include "CONSOLE.h"
+#include "GPU.h"
 #include "MEM.h"
 #include "SD.h"
 
 void RAM::init()
 {
 
-	CONSOLE::block("RAM::init");
+	GPU::block("RAM::init");
 
 	if (SD::eraseSD(SD_MEM_OFFSET, 65536UL / CACHE_LINE_SIZE * MMU_BANKS_NUM) == false) {
-		CONSOLE::error();
+		GPU::error();
 	}
 
 	//RAM::ERASE();
 
-	CONSOLE::ok();
+	GPU::ok();
 
 	//RAM::MEM_TEST();
 }
@@ -48,7 +48,7 @@ void RAM::ERASE() {
 
 void RAM::MEM_TEST() {
 
-	CONSOLE::lnblockln("RAM TESTING");
+	GPU::lnblockln("RAM TESTING");
 
 	uint8_t CHECKED_BANKS;
 	switch (MEM::RAM_TEST_MODE) {
@@ -62,8 +62,8 @@ void RAM::MEM_TEST() {
 
 	for (uint8_t bank = 0; bank < CHECKED_BANKS; bank++) {
 
-		CONSOLE::print(F("BANK "));
-		Serial.print(bank, HEX);
+		GPU::print(F("BANK "));
+		GPU::print(String(bank, HEX));
 
 		for (uint8_t block = 0; block < MMU_BLOCKS_NUM; block++) {
 			MEM::bank_set(block, bank);
@@ -71,11 +71,11 @@ void RAM::MEM_TEST() {
 
 		CONFIG::RAM_AVAIL = MEM::MEM_TEST(true);
 
-		Serial.print(CONFIG::RAM_AVAIL / 1024, DEC);
-		CONSOLE::println("K");
+		GPU::print(String(CONFIG::RAM_AVAIL / 1024, DEC));
+		GPU::println("K");
 
 		if (CONFIG::RAM_AVAIL != 0x10000) {
-			CONSOLE::error();
+			GPU::error();
 		}
 	}
 
@@ -84,12 +84,12 @@ void RAM::MEM_TEST() {
 		MEM::bank_set(block, 0);
 	}
 
-	Serial.print(CONFIG::RAM_AVAIL, DEC);
-	CONSOLE::print(" X ");
-	Serial.print(MMU_BANKS_NUM, DEC);
-	CONSOLE::blockln(F(" BYTE(S) OF RAM ARE AVAILABLE"));
+	GPU::print(String(CONFIG::RAM_AVAIL, DEC));
+	GPU::print(" X ");
+	GPU::print(String(MMU_BANKS_NUM, DEC));
+	GPU::blockln(F(" BYTE(S) OF RAM ARE AVAILABLE"));
 
-	CONSOLE::block("RAM TESTING");
-	CONSOLE::ok();
+	GPU::block("RAM TESTING");
+	GPU::ok();
 }
 

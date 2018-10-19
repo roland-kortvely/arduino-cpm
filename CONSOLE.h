@@ -3,7 +3,10 @@
  */
 
 
+#include <PS2Keyboard.h>
+
 #include "CONFIG.h"
+
 
 #ifndef _CONSOLE_h
 #define _CONSOLE_h
@@ -18,6 +21,8 @@ class CONSOLE
 {
 public:
 
+	static PS2Keyboard keyboard;
+
 	static volatile char kbd_buffer[KBD_BUFFER_SIZE];	//console input buffer
 	static volatile uint8_t kbd_chars;				//received chars number
 
@@ -27,6 +32,8 @@ public:
 	static int mon_ptr;
 
 	static boolean MON;
+
+	static void init();
 
 	static void clrscr();
 	static void clrlin();
@@ -59,6 +66,7 @@ public:
 	static void ok();
 	static void skip();
 	static void error(String s = "ERROR!");
+	static void warning(String s = "WARNING!");
 };
 
 #endif

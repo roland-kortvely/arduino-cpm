@@ -17,8 +17,10 @@ class CMD
 private:
 	static void format();
 	static void status();
-	static void BIOS();
 	static void MEM_TEST();
+	static void transfer();
+	static void BIOS();
+
  public:
 	static void exec();
 };

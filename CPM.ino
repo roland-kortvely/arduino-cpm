@@ -4,22 +4,14 @@
 
 
 #include "IPL.h"
-#include "i8080.h"
-#include "CONSOLE.h"
+#include "BIOS.h"
 
 void setup()
 {
 	IPL::init();
-	I8080::init();
 }
 
 void loop()
 {
-	I8080::boot();
-
-	CONSOLE::clrscr();
-	CONSOLE::color(1);
-	CONSOLE::lnblockln("HALT!");
-	
-	while (1) {}						//TODO: Reset
+	BIOS::BOOT();
 }

@@ -4,6 +4,7 @@
 
 
 #include "CONFIG.h"
+#include "GPU.h"
 #include "IO.h"
 #include "CONSOLE.h"
 #include "MEM.h"
@@ -24,7 +25,9 @@ uint8_t IO::SENSE_SW = 0x00;
 void IO::init()
 {
 
-	CONSOLE::block("IO::init");
+	CONSOLE::keyboard.begin(PS2_DATA, PS2_CLK);
+
+	//GPU::block("IO::init");
 
 	pinMode(LED_pin, OUTPUT);
 	digitalWrite(LED_pin, LOW);
@@ -32,7 +35,7 @@ void IO::init()
 	pinMode(OUT_pin, OUTPUT);
 	digitalWrite(OUT_pin, LOW);
 
-	CONSOLE::ok();
+	//GPU::ok();
 }
 
 //address <- _AB
@@ -140,12 +143,12 @@ void IO::_OUTPORT() {
 		//SIO-A
 	case SIOA_CON_PORT_DATA:
 		//output to console
-		Serial.write(dat);
+		GPU::write(dat);
 		break;
 		//SIO-2
 	case SIO2_CON_PORT_DATA:
 		//output to console
-		Serial.write(dat);
+		GPU::write(dat);
 		break;
 		//FDD ports
 	case FDD_PORT_CMD:

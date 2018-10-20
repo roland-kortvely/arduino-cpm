@@ -39,15 +39,6 @@
     <ClInclude Include="MEM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="C:\Users\mikro\Downloads\cpm\Sd2Card.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="C:\Users\mikro\Downloads\cpm\Sd2PinMap.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="C:\Users\mikro\Downloads\cpm\SdInfo.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="FDD.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -75,6 +66,15 @@
     <ClInclude Include="GPU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Sd2Card.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Sd2PinMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SdInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="IPL.cpp">
@@ -90,9 +90,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MEM.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="C:\Users\mikro\Downloads\cpm\Sd2Card.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="FDD.cpp">
@@ -117,6 +114,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GPU.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Sd2Card.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

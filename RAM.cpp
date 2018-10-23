@@ -12,7 +12,7 @@
 void RAM::init()
 {
 
-	GPU::block("RAM::init");
+	//GPU::block("RAM::init");
 
 	if (SD::eraseSD(SD_MEM_OFFSET, 65536UL / CACHE_LINE_SIZE * MMU_BANKS_NUM) == false) {
 		GPU::error();
@@ -20,7 +20,7 @@ void RAM::init()
 
 	//RAM::ERASE();
 
-	GPU::ok();
+	//GPU::ok();
 
 	//RAM::MEM_TEST();
 }

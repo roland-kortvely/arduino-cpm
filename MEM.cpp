@@ -35,7 +35,7 @@ uint8_t MEM::MMU_MAP[MMU_BLOCKS_NUM];
 void MEM::init()
 {
 	//EEPROM init
-	GPU::block("EEPROM::init");
+	//GPU::block("EEPROM::init");
 
 	//if ((EEPROM.read(0xFE) != 0x55) || (EEPROM.read(0xFF) != 0xAA)) {
 
@@ -59,7 +59,7 @@ void MEM::init()
 		//0xFF - 0xAA
 		EEPROM.write(0xFF, 0xAA);
 
-		GPU::ok();
+		//GPU::ok();
 	//}
 	/*
 	else {
@@ -68,7 +68,7 @@ void MEM::init()
 	*/
 
 	//MMU init
-	GPU::block("MMU::init");
+	//GPU::block("MMU::init");
 
 	for (uint32_t i = 0; i < MMU_BLOCKS_NUM; i++) {
 		MEM::MMU_MAP[i] = 0;
@@ -85,7 +85,7 @@ void MEM::init()
 	for (uint32_t i = 0; i < CACHE_LINES_NUM; i++) {
 		MEM::cache_start[i] = i * CACHE_LINE_SIZE;
 	}
-	GPU::ok();
+	//GPU::ok();
 }
 
 void MEM::bank_set(uint8_t block, uint8_t bank) {

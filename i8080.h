@@ -113,7 +113,7 @@ public:
 	static volatile uint8_t _IR;				//instruction register
 
 	static void init();
-	static void boot();
+	static void BOOT();
 
 	static void state();
 	static uint16_t pc2a16();

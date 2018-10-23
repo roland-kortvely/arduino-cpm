@@ -16,7 +16,6 @@ class IPL
 {
  public:
 	static void init();
-	static void call(word addr);
 };
 
 #endif

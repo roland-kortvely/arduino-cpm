@@ -11,6 +11,8 @@ void GPU::init()
 {
 	CONSOLE::init();
 	LCD::init();
+
+	GPU::lnblockln("Version " + String(VERSION));
 }
 
 void GPU::write(uint8_t n) {
@@ -59,8 +61,8 @@ void GPU::warning(String s = "WARNING!") {
 }
 
 void GPU::error(String s = "ERROR!") {
-	CONSOLE::warning(s);
-	LCD::warning(s);
+	CONSOLE::error(s);
+	LCD::error(s);
 }
 
 void GPU::clrscr()

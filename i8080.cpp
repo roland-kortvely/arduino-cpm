@@ -44,23 +44,7 @@ void I8080::init()
 	GPU::print(">");
 }
 
-void I8080::boot() {
-
-	uint32_t adr;
-	uint8_t port;
-	uint8_t dat;
-	boolean _EOF;
-	boolean error;
-	uint8_t hex_count;
-	uint8_t hex_len;
-	uint8_t hex_type;
-	uint8_t hex_crc;
-	uint8_t hex_bytes;
-	uint16_t len;
-	uint16_t count;
-	uint8_t crc;
-	uint8_t tmp_byte;
-	uint16_t tmp_word;
+void I8080::BOOT() {
 
 	while (true) {
 		do
@@ -100,7 +84,9 @@ void I8080::boot() {
 }
 
 void I8080::state() {
+
 	char hex[2];
+
 	CONSOLE::clrlin();
 	Serial.print("A:");
 	sprintf(hex, "%02X", _Regs[_Reg_A]);
@@ -162,6 +148,7 @@ void I8080::state() {
 	else {
 		Serial.print(" ");
 	}
+
 	Serial.println("   ");
 	CONSOLE::clrlin();
 	Serial.print(F("PC:"));
@@ -191,7 +178,9 @@ void I8080::state() {
 }
 
 uint16_t I8080::pc2a16() {
+
 	uint16_t a16;
+
 	_PC++;
 	a16 = MEM::_get(_PC);
 	_PC++;
@@ -263,6 +252,7 @@ void I8080::_MVI(uint8_t DDD) {
 
 //LXI
 void I8080::_LXI(uint8_t rp) {
+
 	_PC++;
 	MEM::_AB = _PC;
 	MEM::_RD();
@@ -280,6 +270,7 @@ void I8080::_LXI(uint8_t rp) {
 		_SP = MEM::_DB;
 		break;
 	}
+
 	_PC++;
 	MEM::_AB = _PC;
 	MEM::_RD();
@@ -297,6 +288,7 @@ void I8080::_LXI(uint8_t rp) {
 		_SP = _SP + 256 * MEM::_DB;
 		break;
 	}
+
 	_PC++;
 }
 
@@ -647,12 +639,9 @@ void I8080::_SBI() {
 	MEM::_AB = _PC;
 }
 
-//The Auxiliary Carry bit will be affected by all addition,
-//subtraction, increment, decrement, and compare
-//instructions.
-
 //INR
 void I8080::_INR(uint8_t DDD) {
+
 	if (DDD == _Reg_M)
 	{
 		MEM::_AB = _rpHL;
@@ -663,6 +652,7 @@ void I8080::_INR(uint8_t DDD) {
 		_TMP = _Regs[DDD];
 	}
 	_ALU = _TMP + 1;
+
 	if (DDD == _Reg_M)
 	{
 		MEM::_DB = _ALU;
@@ -672,14 +662,17 @@ void I8080::_INR(uint8_t DDD) {
 	else {
 		_Regs[DDD] = _ALU;
 	}
+
 	_FLAGS(_ALU);
 	_setFlags_C(0);
 	if ((_ALU & 0x0F) == 0x00) {
+
 		_setFlags_A(1);
 	}
 	else {
 		_setFlags_A(0);
 	}
+
 	_PC++;
 }
 
@@ -773,9 +766,11 @@ void I8080::_DCX(uint8_t rp) {
 
 //DAD
 void I8080::_DAD(uint8_t rp) {
+
 	uint16_t d16_1;
 	uint16_t d16_2;
 	uint16_t d16_3;
+
 	d16_1 = _rH * 256 + _rL;
 	switch (rp) {
 	case _RP_BC:
@@ -791,22 +786,27 @@ void I8080::_DAD(uint8_t rp) {
 		d16_2 = _SP;
 		break;
 	}
+
 	d16_3 = d16_1 + d16_2;
+
 	_rH = highByte(d16_3);
 	_rL = lowByte(d16_3);
+
 	if ((d16_3 < d16_1) || (d16_3 < d16_2)) {
 		_setFlags_C(1);
 	}
 	else {
 		_setFlags_C(0);
 	}
+
 	_PC++;
 }
 
 //DAA
 void I8080::_DAA() {
-	uint8_t d8;
-	d8 = 0;
+
+	uint8_t d8 = 0;
+
 	if (((_rA & 0x0F) > 9) || (_getFlags_A() == 1))
 	{
 		if ((_rA & 0x0F) > 9) {
@@ -826,6 +826,7 @@ void I8080::_DAA() {
 		d8 = d8 | 0x60;
 	}
 	_rA = _rA + d8;
+
 	//SZP flags
 	_rF = (_rF & ZP_RESET) | (pgm_read_byte_near(SZP_table + _rA) & B01111111);
 	_PC++;
@@ -845,7 +846,7 @@ void I8080::_ANA(uint8_t SSS) {
 		_TMP = _Regs[SSS];
 		_ACT = _rA;
 	}
-	//8080 - CY = 0, AC = bits 3 _rA OR d8
+	
 	_setFlags_C(0);
 	if (((_ACT & B1000) | (_TMP & B1000)) != 0) {
 		_setFlags_A(1);
@@ -854,7 +855,7 @@ void I8080::_ANA(uint8_t SSS) {
 	{
 		_setFlags_A(0);
 	}
-	//8085 - CY = 0, AC = 1
+
 	_rA = _ACT & _TMP;
 	_FLAGS(_rA);
 	_PC++;
@@ -867,7 +868,7 @@ void I8080::_ANI() {
 	MEM::_AB = _PC;
 	MEM::_RD();
 	_TMP = MEM::_DB;
-	//8080 - CY = 0, AC = bits 3 _rA OR d8
+
 	_setFlags_C(0);
 	if (((_ACT & B1000) | (_TMP & B1000)) != 0) {
 		_setFlags_A(1);
@@ -895,6 +896,7 @@ void I8080::_ORA(uint8_t SSS) {
 		_TMP = _Regs[SSS];
 		_ACT = _rA;
 	}
+
 	_rA = _ACT | _TMP;
 	_FLAGS(_rA);
 	_setFlags_C(0);
@@ -988,19 +990,23 @@ void I8080::_CPI() {
 	MEM::_AB = _PC;
 	MEM::_RD();
 	_TMP = MEM::_DB;
+
 	if (_ACT < _TMP) {
 		_setFlags_C(1);
 	}
 	else {
 		_setFlags_C(0);
 	}
+
 	_TMP = _TMP ^ 0xFF;
+
 	if ((_ACT & 0xF) + (_TMP & 0xF) > 0xF) {
 		_setFlags_A(1);
 	}
 	else {
 		_setFlags_A(0);
 	}
+
 	_TMP = _TMP + 1;
 	_FLAGS(lowByte(_ACT + _TMP));
 	_PC++;

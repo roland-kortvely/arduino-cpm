@@ -16,8 +16,6 @@ void IPL::init()
 {
 	GPU::init();
 
-	//GPU::lnblockln(F("INITIAL PROGRAM LOAD (IPL)"));
-
 	IO::init();
 
 	MEM::init();

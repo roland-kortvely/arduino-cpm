@@ -2,7 +2,7 @@
  * Copyright (c) 2018 Roland Körtvely <roland.kortvely@gmail.com>
  */
 
-/*
+
 #include "GPU.h"
 #include "CMD.h"
 #include "CONFIG.h"
@@ -52,19 +52,7 @@ void CMD::exec()
 }
 
 void CMD::BIOS() {
-	CONSOLE::clrscr();						//clear screen
-
-	if (!BIOS::IPL()) {						//initial loader
-		GPU::error("BIOS::IPL FAILURE!");
-	}
-
-	CONFIG::BIOS_INT = true;				//BIOS intercept enabled
-
-	CONSOLE::MON = false;
-
-	IPL::call(_BIOS);						//JMP TO BIOS
-
-	CONSOLE::MON = true;
+	BIOS::BOOT();
 }
 
 void CMD::MEM_TEST() {
@@ -171,4 +159,3 @@ void CMD::transfer() {
 	GPU::print(String(count, DEC));
 	GPU::println(F(" byte(s) were successfully received"));
 }
-*/

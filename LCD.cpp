@@ -14,7 +14,7 @@ void LCD::init()
 {
 	Wire.begin();
 
-	delay(2000);			//Wait for Slave arduino init		//TODO:: Handshake
+	delay(1000);			//Wait for Slave arduino init		//TODO:: Handshake?
 
 	LCD::clrscr();
 }

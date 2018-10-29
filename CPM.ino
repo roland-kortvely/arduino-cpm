@@ -5,6 +5,7 @@
 #include "CONFIG.h"
 #include "IPL.h"
 #include "i8080.h"
+#include "GPU.h"
 
 void setup()
 {

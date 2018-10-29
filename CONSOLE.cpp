@@ -109,17 +109,6 @@ void CONSOLE::xy(uint8_t row, uint8_t col) {
 	Serial.print("H");
 }
 
-void CONSOLE::con_flush() {
-	switch (CON_IN) {
-	case 0: //terminal
-		//Serial.flush();
-		break;
-	case 1: //PS2
-		CONSOLE::kbd_chars = 0;
-		break;
-	}
-}
-
 void CONSOLE::welcome() {
 
 	CONSOLE::color(2);
@@ -179,37 +168,26 @@ void CONSOLE::warning(String s = "WARNING!") {
 }
 
 boolean CONSOLE::con_ready() {
-	boolean res;
+
 	switch (CON_IN) {
-	case 0: //terminal
-		if (Serial.available() > 0) {
-			res = true;
-		}
-		else {
-			res = false;
-		}
-		break;
-	case 1: //PS/2 keyboard
-			//cli();
-		if (CONSOLE::keyboard.available() > 0) {
-			res = true;
-		}
-		else {
-			res = false;
-		}
-		//sei();
-		break;
+	case 0: 
+		//terminal
+		return (Serial.available() > 0);
+	case 1: 
+		//PS/2 keyboard
+		return (CONSOLE::keyboard.available() > 0);
 	}
-	return res;
+
+	return false;
 }
 
-//console input/output procedures
 char CONSOLE::con_read() {
 
 	char key = '\0';
 
 	switch (CON_IN) {
-	case 0: //terminal
+	case 0: 
+		//terminal
 		if (Serial.available() > 0) {
 			key = Serial.read();
 			if (!MON && ((uint8_t)key == CTRL_SLASH_KEY)) {
@@ -217,7 +195,8 @@ char CONSOLE::con_read() {
 			}
 		}
 		break;
-	case 1: //PS/2 keyboard
+	case 1: 
+		//PS/2 keyboard
 		if (CONSOLE::keyboard.available() > 0) {
 			key = CONSOLE::keyboard.read();
 			if (!MON && ((uint8_t)key == PS2_ESC)) {
@@ -226,10 +205,10 @@ char CONSOLE::con_read() {
 		}
 		break;
 	}
+
 	return key;
 }
 
-//conversion functions
 int CONSOLE::str2hex(String s)
 {
 	int x = 0;

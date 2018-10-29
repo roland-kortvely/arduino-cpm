@@ -122,9 +122,6 @@ void CMD::transfer() {
 	uint32_t adr = CONSOLE::kbd2word(1);
 	uint16_t tmp_word = MEM::_AB;
 
-	CONSOLE::con_flush();
-
-
 	GPU::warning(F("Ready to receive file..."));
 	//Serial.print(F("Address: "));
 	//Serial.println(adr, HEX);

@@ -49,12 +49,16 @@ void I8080::BOOT() {
 	while (true) {
 		do
 		{
+
 			CONSOLE::inChar = '\0';
+
 			if (CONSOLE::con_ready()) {
+
 				CONSOLE::inChar = CONSOLE::con_read();
 				//Serial.print(uint8_t(inChar),HEX);
 				CONSOLE::inChar = CONSOLE::upCase(CONSOLE::inChar);
-				if (uint8_t(CONSOLE::inChar) == BS_KEY) {
+
+				if (uint8_t(CONSOLE::inChar) == BS_KEY || uint8_t(CONSOLE::inChar) == PS2_BACKSPACE) {
 					//backspace
 					if (CONSOLE::mon_ptr > 0) {
 						CONSOLE::mon_ptr--;
@@ -77,9 +81,10 @@ void I8080::BOOT() {
 
 		CMD::exec();
 
-		CONSOLE::xy(MON_Y, 0);
+		//CONSOLE::xy(MON_Y, 0);
 		GPU::print(">");
-		CONSOLE::clrend();
+		//CONSOLE::clrend();
+		GPU::println("CRASH?");
 	}
 }
 

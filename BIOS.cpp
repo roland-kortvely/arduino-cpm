@@ -12,37 +12,35 @@
 #include "BIOS.h"
 #include "IO.h"
 #include "IPL.h"
+#include "CONSOLE.h"
 
 void BIOS::BOOT()
 {
-	GPU::clrscr();						//clear screen
+	GPU::clrscr();							//clear screen
 
-	if (!BIOS::IPL()) {						//initial loader
-		GPU::error("BIOS::IPL FAILURE!");
+	while (!BIOS::IPL()) {						//initial loader
+		delay(1000);
 	}
 
 	CONFIG::BIOS_INT = true;				//BIOS intercept enabled
-	//CONSOLE::MON = false;
+	CONSOLE::MON = false;
 
 	BIOS::call(_BIOS);						//JMP TO BIOS
 
-	//CONSOLE::MON = true;
+	CONSOLE::MON = true;
 }
 
 bool BIOS::IPL()
 {
-	GPU::println(F("IPL PRECHECK"));
-
-	uint16_t i;
+	GPU::println("IPL PRECHECK");
 
 	uint8_t checksum = 0x00;
 	uint8_t res;
 	uint8_t d8;
 
-	boolean success = false;
-
 	char hex[2];
 
+	/*
 	Serial.print(RAM_SIZE, DEC);
 	Serial.println("K SYSTEM");
 	Serial.print("CBASE: ");
@@ -56,6 +54,7 @@ bool BIOS::IPL()
 	Serial.print(_BIOS_LO, HEX);
 	Serial.print(" ... ");
 	Serial.println(_BIOS_HI, HEX);
+	*/
 	//GPU::println("");
 	//GPU::println(F("IPL"));
 
@@ -103,177 +102,178 @@ bool BIOS::IPL()
 	if (checksum != CPMSYS_CS) {
 
 		GPU::error(F("\nCPM.SYS CHECKSUM ERROR!"));
-		success = false;
-
-		return success;
+		return false;
 	}
-	else {
-		GPU::println(F("O.K.!"));
-		success = true;
 
-		for (uint16_t j = CPM_LBL_START; j < (CPM_LBL_START + CPM_LBL_LEN); j++) {
-			MEM::_AB = CBASE + j;
-			MEM::_RD();
-			GPU::write(MEM::_DB);
-		}
+	GPU::println(F("O.K.!"));
 
-		GPU::println("");
-		GPU::print(F("Serial: "));
-		for (uint16_t j = CPM_SERIAL_START; j < (CPM_SERIAL_START + CPM_SERIAL_LEN); j++) {
-			MEM::_AB = CBASE + j;
-			MEM::_RD();
-			sprintf(hex, "%02X", MEM::_DB);
-			GPU::print(hex);
-		}
-		GPU::println("");
+	for (uint16_t j = CPM_LBL_START; j < (CPM_LBL_START + CPM_LBL_LEN); j++) {
+		MEM::_AB = CBASE + j;
+		MEM::_RD();
+		GPU::write(MEM::_DB);
+	}
 
+	GPU::println("");
+	GPU::print(F("Serial: "));
+	for (uint16_t j = CPM_SERIAL_START; j < (CPM_SERIAL_START + CPM_SERIAL_LEN); j++) {
+		MEM::_AB = CBASE + j;
+		MEM::_RD();
+		sprintf(hex, "%02X", MEM::_DB);
+		GPU::print(hex);
+	}
+	GPU::println("");
 
-		i = _DPBASE;
+	uint16_t i = _DPBASE;
 
-		for (uint16_t l = 0; l < FDD_NUM; l++) {
-			MEM::_AB = i;
-			MEM::_DB = 0x00;
-			MEM::_WR();
-			i++;
-			MEM::_AB = i;
-			MEM::_DB = 0x00;
-			MEM::_WR();
-			i++;
-			MEM::_AB = i;
-			MEM::_DB = 0x00;
-			MEM::_WR();
-			i++;
-			MEM::_AB = i;
-			MEM::_DB = 0x00;
-			MEM::_WR();
-			i++;
-			MEM::_AB = i;
-			MEM::_DB = 0x00;
-			MEM::_WR();
-			i++;
-			MEM::_AB = i;
-			MEM::_DB = 0x00;
-			MEM::_WR();
-			i++;
-			MEM::_AB = i;
-			MEM::_DB = 0x00;
-			MEM::_WR();
-			i++;
-			MEM::_AB = i;
-			MEM::_DB = 0x00;
-			MEM::_WR();
-			//DIRBUF
-			i++;
-			MEM::_AB = i;
-			MEM::_DB = lowByte(_DIRBUF);
-			MEM::_WR();
-			i++;
-			MEM::_AB = i;
-			MEM::_DB = highByte(_DIRBUF);
-			MEM::_WR();
-			//DPB
-			i++;
-			MEM::_AB = i;
-			MEM::_DB = lowByte(_DPBLK);
-			MEM::_WR();
-			i++;
-			MEM::_AB = i;
-			MEM::_DB = highByte(_DPBLK);
-			MEM::_WR();
-			//CSV
-			i++;
-			MEM::_AB = i;
-			MEM::_DB = lowByte(_CHK00);
-			MEM::_WR();
-			i++;
-			MEM::_AB = i;
-			MEM::_DB = highByte(_CHK00);
-			MEM::_WR();
-			//ALV
-			i++;
-			MEM::_AB = i;
-			MEM::_DB = lowByte(_ALL00);
-			MEM::_WR();
-			i++;
-			MEM::_AB = i;
-			MEM::_DB = highByte(_ALL00);
-			MEM::_WR();
-			i++;
-		}
+	for (uint16_t l = 0; l < FDD_NUM; l++) {
 
-		//DPB init
-		i = _DPBLK;
-		//SPT
 		MEM::_AB = i;
-		MEM::_DB = 26;
+		MEM::_DB = 0x00;
 		MEM::_WR();
-		MEM::_AB = i + 1;
-		MEM::_DB = 0;
+		i++;
+		MEM::_AB = i;
+		MEM::_DB = 0x00;
 		MEM::_WR();
-		//BSH
-		MEM::_AB = i + 2;
-		MEM::_DB = 3;
+		i++;
+		MEM::_AB = i;
+		MEM::_DB = 0x00;
 		MEM::_WR();
-		//BLM
-		MEM::_AB = i + 3;
-		MEM::_DB = 7;
+		i++;
+		MEM::_AB = i;
+		MEM::_DB = 0x00;
 		MEM::_WR();
-		//EXM
-		MEM::_AB = i + 4;
-		MEM::_DB = 0;
+		i++;
+		MEM::_AB = i;
+		MEM::_DB = 0x00;
 		MEM::_WR();
-		//DSM
-		MEM::_AB = i + 5;
-		MEM::_DB = 242;
+		i++;
+		MEM::_AB = i;
+		MEM::_DB = 0x00;
 		MEM::_WR();
-		MEM::_AB = i + 6;
-		MEM::_DB = 0;
+		i++;
+		MEM::_AB = i;
+		MEM::_DB = 0x00;
 		MEM::_WR();
-		//DRM
-		MEM::_AB = i + 7;
-		MEM::_DB = 63;
-		MEM::_WR();
-		MEM::_AB = i + 8;
-		MEM::_DB = 0;
-		MEM::_WR();
-		//AL0    
-		MEM::_AB = i + 9;
-		MEM::_DB = 192;
-		MEM::_WR();
-		//AL1
-		MEM::_AB = i + 0xA;
-		MEM::_DB = 0;
-		MEM::_WR();
-		//CKS
-		MEM::_AB = i + 0xB;
-		MEM::_DB = 0;
-		MEM::_WR();
-		MEM::_AB = i + 0xC;
-		MEM::_DB = 0;
-		MEM::_WR();
-		//OFF
-		MEM::_AB = i + 0xD;
-		MEM::_DB = 0;
-		MEM::_WR();
-		MEM::_AB = i + 0xE;
-		MEM::_DB = 0;
-		MEM::_WR();
-		MEM::_AB = i + 0xF;
-		MEM::_DB = 0;
+		i++;
+		MEM::_AB = i;
+		MEM::_DB = 0x00;
 		MEM::_WR();
 
-		/*
-		   BLS       BSH     BLM           EXM
-		 -----      ---     ---     DSM<256   DSM>=256
-		  1024       3       7         0        n/a
-		 */
+		//DIRBUF
+		i++;
+		MEM::_AB = i;
+		MEM::_DB = lowByte(_DIRBUF);
+		MEM::_WR();
+		i++;
+		MEM::_AB = i;
+		MEM::_DB = highByte(_DIRBUF);
+		MEM::_WR();
+
+		//DPB
+		i++;
+		MEM::_AB = i;
+		MEM::_DB = lowByte(_DPBLK);
+		MEM::_WR();
+		i++;
+		MEM::_AB = i;
+		MEM::_DB = highByte(_DPBLK);
+		MEM::_WR();
+
+		//CSV
+		i++;
+		MEM::_AB = i;
+		MEM::_DB = lowByte(_CHK00);
+		MEM::_WR();
+		i++;
+		MEM::_AB = i;
+		MEM::_DB = highByte(_CHK00);
+		MEM::_WR();
+
+		//ALV
+		i++;
+		MEM::_AB = i;
+		MEM::_DB = lowByte(_ALL00);
+		MEM::_WR();
+		i++;
+		MEM::_AB = i;
+		MEM::_DB = highByte(_ALL00);
+		MEM::_WR();
+		i++;
 	}
 
-	return success;
+	//DPB init
+	i = _DPBLK;
+	//SPT
+	MEM::_AB = i;
+	MEM::_DB = 26;
+	MEM::_WR();
+	MEM::_AB = i + 1;
+	MEM::_DB = 0;
+	MEM::_WR();
+	//BSH
+	MEM::_AB = i + 2;
+	MEM::_DB = 3;
+	MEM::_WR();
+	//BLM
+	MEM::_AB = i + 3;
+	MEM::_DB = 7;
+	MEM::_WR();
+	//EXM
+	MEM::_AB = i + 4;
+	MEM::_DB = 0;
+	MEM::_WR();
+	//DSM
+	MEM::_AB = i + 5;
+	MEM::_DB = 242;
+	MEM::_WR();
+	MEM::_AB = i + 6;
+	MEM::_DB = 0;
+	MEM::_WR();
+	//DRM
+	MEM::_AB = i + 7;
+	MEM::_DB = 63;
+	MEM::_WR();
+	MEM::_AB = i + 8;
+	MEM::_DB = 0;
+	MEM::_WR();
+	//AL0    
+	MEM::_AB = i + 9;
+	MEM::_DB = 192;
+	MEM::_WR();
+	//AL1
+	MEM::_AB = i + 0xA;
+	MEM::_DB = 0;
+	MEM::_WR();
+	//CKS
+	MEM::_AB = i + 0xB;
+	MEM::_DB = 0;
+	MEM::_WR();
+	MEM::_AB = i + 0xC;
+	MEM::_DB = 0;
+	MEM::_WR();
+	//OFF
+	MEM::_AB = i + 0xD;
+	MEM::_DB = 0;
+	MEM::_WR();
+	MEM::_AB = i + 0xE;
+	MEM::_DB = 0;
+	MEM::_WR();
+	MEM::_AB = i + 0xF;
+	MEM::_DB = 0;
+	MEM::_WR();
+
+	/*
+	   BLS       BSH     BLM           EXM
+	 -----      ---     ---     DSM<256   DSM>=256
+	  1024       3       7         0        n/a
+	 */
+
+	return true;
 }
 
 void BIOS::call(word addr)
 {
+
 	byte cmd;
 	bool exe_flag;
 
@@ -284,7 +284,9 @@ void BIOS::call(word addr)
 	{
 		MEM::_AB = I8080::_PC;
 
-		if (CONFIG::exitFlag) { break; }							//go to monitor
+		if (CONFIG::exitFlag) { 
+			break; 
+		}							
 
 		if (BIOS::INT()) {
 			break;
@@ -293,7 +295,7 @@ void BIOS::call(word addr)
 		MEM::_RD();													//(AB) -> INSTR  instruction fetch
 		I8080::_IR = MEM::_DB;
 
-		((EXEC)pgm_read_word(&MAP_ARR[I8080::_IR])) ();				//decode
+		((EXEC)pgm_read_word(&MAP_ARR[I8080::_IR]))();				//decode
 
 	} while (true);
 
@@ -306,124 +308,91 @@ void BIOS::call(word addr)
 
 bool BIOS::INT() {
 
-	bool exe_flag = true;
+	switch (I8080::_PC) {
 
-	/*
-	if (I8080::_PC == FBASE) {
-		if (DEBUG)
-		{
-			color(3);
-			Serial.print(F("BDOS Fn:"));
-			Serial.print(_Regs[_Reg_C], HEX);
-			Serial.print(F(" DE="));
-			Serial.print(_Regs[_Reg_D], HEX);
-			Serial.println(_Regs[_Reg_E], HEX);
-			color(9);
-		}
-	}*/
+	case _BIOS + 0U:						//BOOT
+		BIOS::_BIOS_BOOT();
+		break;
 
-	if ((I8080::_PC >= _BIOS_LO) && (I8080::_PC < _BIOS_HI) && CONFIG::BIOS_INT) {
+	case _BIOS + 3U:						//WBOOT
+		BIOS::_BIOS_WBOOT();
+		break;
 
-		switch (I8080::_PC) {
+		//ASCII 7 ‚ 0
+		//CTRL-Z 0x1A
+	case _BIOS + 6U:						//CONST
+		BIOS::_BIOS_CONST();
+		break;
 
-		case _BIOS + 0U://BOOT
-			BIOS::_BIOS_BOOT();
-			exe_flag = false;
-			break;
+	case _BIOS + 9U:						//CONIN
+		BIOS::_BIOS_CONIN();
+		break;
 
-		case _BIOS + 3U://WBOOT
-			BIOS::_BIOS_WBOOT();
-			exe_flag = false;
-			break;
+	case _BIOS + 0xcU:						//CONOUT
+		BIOS::_BIOS_CONOUT();
+		break;
 
-			//ASCII 7 ‚ 0
-			//CTRL-Z 0x1A
-		case _BIOS + 6U://CONST
-			BIOS::_BIOS_CONST();
-			exe_flag = false;
-			break;
+	case _BIOS + 0xfU:						//LIST
+		BIOS::_BIOS_LIST();
+		break;
 
-		case _BIOS + 9U://CONIN
-			BIOS::_BIOS_CONIN();
-			exe_flag = false;
-			break;
+	case _BIOS + 0x12U:						//PUNCH
+		BIOS::_BIOS_PUNCH();
+		break;
 
-		case _BIOS + 0xcU://CONOUT
-			BIOS::_BIOS_CONOUT();
-			exe_flag = false;
-			break;
+	case _BIOS + 0x15U:						//READER 
+		BIOS::_BIOS_READER();
+		break;
 
-		case _BIOS + 0xfU://LIST
-			BIOS::_BIOS_LIST();
-			exe_flag = false;
-			break;
+	case _BIOS + 0x2dU:						//LISTST
+		BIOS::_BIOS_LISTST();
+		break;
 
-		case _BIOS + 0x12U://PUNCH
-			BIOS::_BIOS_PUNCH();
-			exe_flag = false;
-			break;
+	case _BIOS + 0x18U:						//HOME
+		BIOS::_BIOS_HOME();
+		break;
 
-		case _BIOS + 0x15U://READER 
-			BIOS::_BIOS_READER();
-			exe_flag = false;
-			break;
+	case _BIOS + 0x1bU:						//SELDSK
+		BIOS::_BIOS_SELDSK();
+		break;
 
-		case _BIOS + 0x2dU://LISTST
-			BIOS::_BIOS_LISTST();
-			exe_flag = false;
-			break;
+	case _BIOS + 0x1eU:						//SETTRK
+		BIOS::_BIOS_SETTRK();
+		break;
 
-		case _BIOS + 0x18U://HOME
-			BIOS::_BIOS_HOME();
-			exe_flag = false;
-			break;
+	case _BIOS + 0x21U:						//SETSEC
+		BIOS::_BIOS_SETSEC();
+		break;
 
-		case _BIOS + 0x1bU://SELDSK
-			BIOS::_BIOS_SELDSK();
-			exe_flag = false;
-			break;
+	case _BIOS + 0x24U:						//SETDMA
+		BIOS::_BIOS_SETDMA();
+		break;
 
-		case _BIOS + 0x1eU://SETTRK
-			BIOS::_BIOS_SETTRK();
-			exe_flag = false;
-			break;
+	case _BIOS + 0x27U:						//READ
+		BIOS::_BIOS_READ();
+		break;
 
-		case _BIOS + 0x21U://SETSEC
-			BIOS::_BIOS_SETSEC();
-			exe_flag = false;
-			break;
+	case _BIOS + 0x2aU:						//WRITE
+		BIOS::_BIOS_WRITE();
+		break;
 
-		case _BIOS + 0x24U://SETDMA
-			BIOS::_BIOS_SETDMA();
-			exe_flag = false;
-			break;
-
-		case _BIOS + 0x27U://READ
-			BIOS::_BIOS_READ();
-			exe_flag = false;
-			break;
-
-		case _BIOS + 0x2aU://WRITE
-			BIOS::_BIOS_WRITE();
-			exe_flag = false;
-			break;
-
-		case _BIOS + 0x30U://SECTRAN
-			BIOS::_BIOS_SECTRAN();
-			exe_flag = false;
-			break;
-
-		default:
-			exe_flag = false;
-			CONFIG::exitFlag = true;	//BIOS error
-			break;
-		}
-
-		return exe_flag;
+	case _BIOS + 0x30U:						//SECTRAN
+		BIOS::_BIOS_SECTRAN();
+		break;
+		/*
+	default:
+		CONFIG::exitFlag = true;			//BIOS error
+		return true;
+		Serial.println("!BIOS::IPL");
+		break;
+		*/
 	}
+
+	return false;
 }
 
 void BIOS::_GOCPM(boolean jmp) {
+
 	//JMP TO WBOOT
 	MEM::_AB = JMP_BOOT;
 	MEM::_DB = 0xC3;
@@ -434,6 +403,7 @@ void BIOS::_GOCPM(boolean jmp) {
 	MEM::_AB = JMP_BOOT + 2;
 	MEM::_DB = highByte(_BIOS + 3);
 	MEM::_WR();
+
 	//JMP TO BDOS
 	MEM::_AB = JMP_BDOS;
 	MEM::_DB = 0xC3;
@@ -444,6 +414,7 @@ void BIOS::_GOCPM(boolean jmp) {
 	MEM::_AB = JMP_BDOS + 2;
 	MEM::_DB = highByte(FBASE);
 	MEM::_WR();
+
 	//SETDMA 0x80
 	MEM::_AB = word(FDD_PORT_DMA_ADDR_LO, FDD_PORT_DMA_ADDR_LO);
 	MEM::_DB = 0x80;
@@ -451,6 +422,7 @@ void BIOS::_GOCPM(boolean jmp) {
 	MEM::_AB = word(FDD_PORT_DMA_ADDR_HI, FDD_PORT_DMA_ADDR_HI);
 	MEM::_DB = 0x00;
 	IO::_OUTPORT();
+
 	//GET CURRENT DISK NUMBER   SEND TO THE CCP
 	MEM::_AB = CDISK;
 	MEM::_RD();
@@ -477,26 +449,24 @@ void BIOS::_BOOT() {
 	MEM::_DB = 0x00;
 	MEM::_WR();					//select disk 0
 
-
-
 	//INITIALIZE AND GO TO CP/M
 	_GOCPM(true);
 }
 
 void BIOS::_WBOOT() {
 
-	boolean load;
-
 	GPU::color(2);
-	GPU::lnblockln(F("BIOS {WBOOT}"));
+	GPU::lnblockln("BIOS {WBOOT}");
 	GPU::color(9);
 	delay(1000);
 
 	//BIOS IPL
 	I8080::_SP = 0x80;
-	do {
-		load = BIOS::IPL();
-	} while (!load);
+
+	while (!BIOS::IPL()) {						//initial loader
+		Serial.println("!BIOS::WBOT::IPL");
+		delay(1000);
+	}
 
 	//INITIALIZE AND GO TO CP/M
 	_GOCPM(true);
@@ -557,7 +527,6 @@ void BIOS::_BIOS_READER() {
 }
 
 void BIOS::_BIOS_LISTST() {
-
 	BIOS::_BIOS_RET();
 }
 
@@ -569,7 +538,7 @@ void BIOS::_BIOS_SETTRK() {
 }
 
 void BIOS::_BIOS_HOME() {
-	_rC = 0;//track 0
+	_rC = 0;											//track 0
 	MEM::_AB = word(FDD_PORT_TRK, FDD_PORT_TRK);
 	MEM::_DB = _rC;
 	IO::_OUTPORT();
@@ -651,15 +620,19 @@ void BIOS::_BIOS_SECTRAN() {
 }
 
 void BIOS::_BIOS_RET() {
+
 	uint16_t a16;
+
 	//RET
 	MEM::_AB = I8080::_SP;
 	MEM::_RD();
 	a16 = MEM::_DB;
+
 	I8080::_SP++;
 	MEM::_AB = I8080::_SP;
 	MEM::_RD();
 	a16 = a16 + 256 * MEM::_DB;
+
 	I8080::_SP++;
 	I8080::_PC = a16;
 	MEM::_AB = I8080::_PC;

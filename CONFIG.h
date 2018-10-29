@@ -14,7 +14,7 @@
 
 #define HALT while(1) {}
 
-constexpr auto VERSION		= "0.1.1";
+constexpr auto VERSION		= "0.1.2";
 
 //IO
 constexpr auto COM_BAUD		= 9600;

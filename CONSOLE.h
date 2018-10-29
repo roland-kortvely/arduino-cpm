@@ -24,7 +24,7 @@ public:
 	static PS2Keyboard keyboard;
 
 	static volatile char kbd_buffer[KBD_BUFFER_SIZE];	//console input buffer
-	static volatile uint8_t kbd_chars;				//received chars number
+	static volatile uint8_t kbd_chars;					//received chars number
 
 	static char mon_buffer[MON_BUFFER_SIZE + 1];
 	static char inChar;
@@ -44,7 +44,6 @@ public:
 	static void color(uint8_t clr);
 	static void xy(uint8_t row, uint8_t col);
 
-	static void con_flush();
 	static boolean con_ready();
 	static char con_read();
 	static int str2hex(String s);

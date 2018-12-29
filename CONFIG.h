@@ -30,7 +30,7 @@ constexpr auto OUT_PORT		= 0xF1;									//OUT port	| CP/M call
 constexpr auto PS2_DATA		= 19;
 constexpr auto PS2_CLK		= 18;
 
-constexpr auto CON_IN		= 1;									// 0 - console | 1 - PS2
+constexpr auto CON_IN		= 0;									// 0 - console | 1 - PS2
 
 constexpr auto MEM_SIZE		= 64;									//Sys RAM
 

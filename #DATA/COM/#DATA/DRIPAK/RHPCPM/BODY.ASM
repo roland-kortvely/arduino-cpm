@@ -1,0 +1,4451 @@
+TITLE		'BODY OF CPM (CCP/BDOS) 17 DEC 84'
+;	***********************************************************
+;
+;           R.H. PETERS RELOCATABLE CONSOLE COMMAND PROCESSOR
+;			FOR CP/M VERSION 2.2
+;
+;	*********************************************************** 
+;		     LAST REVISION: 2 JULY 1984
+;	***********************************************************
+;
+; Patched to cause the CCP of a cp/m 2.x system to look on drive A
+; when you are logged into a drive other than A and call for a .COM
+; file that does not exist on that drive.  Giving an explicit drive
+; reference overrides this feature, so that you can always force
+; the file to be loaded from a specific drive.
+;
+; The serial number check routine has been removed.
+;
+
+;	EQUATES
+;
+BDOS:	EQU	0005H	;Link to operating system
+BYTEIO:	EQU	0003H	;I/O assigment byte for transient programs
+INLOG:	EQU	0004H	;User number and disk number for transient programs
+DFCB:	EQU	005CH	;Default file control block
+TPA:	EQU	0100H	;Start of transient program area
+DMAD:	EQU	0080H	;Default DMA block
+LENSEC:	EQU	0080H	;Sector length := 128 bytes.
+;
+;	NOTE:
+;		On entry (C) contains the user number in the
+;		upper 4 bits, and the current logged in disk
+;		number in to lower 4 bits. This is why you log
+;		back to disk B: if you rebooted while logged
+;		into B:
+
+	PUBLIC	@CCP
+;
+@CCP:
+ORIGIN:	JMP	CCP1	;JUMP TO START OF CONSOLE COMMAND PROGRAM
+;
+	JMP	CCP0	;JUMP TO START OF CCP W/ CLEARING OF INPUT BUFFER COUNTER
+;
+;	INPUT BUFFER WITH COPYRIGHT MESSAGE THROWN IN
+;
+INPB:	DB	127	;MAXIMUM LENGTH OF INPUT BUFFER
+INBLEN:	DB	0	;CURRENT LENGTH OF INPUT BUFFER
+BUFFER:	DB	'                '
+	DS	BUFFER+128-$
+;
+;	POINTERS TO INPUT BUFFER
+;
+BPTR1:	DW	BUFFER	;Pointer to input buffer used while parsing input line
+BPTR2:	DW	0000H	;Pointer to start of current command inn input buffer.
+			;Used by WHAT for error prompt.
+	PAGE
+;	***************
+;	SUBROUTINE AREA
+;	***************
+;
+;	TIES TO BDOS VIA VECTOR IN 0005H
+;
+;
+;
+SPACE:	MVI	A,20H	;PRINT A SPACE
+	JMP	PCHAR	;
+;
+CRLFP:	MVI	A,0DH	;PRINT A CARRIAGE RETURN & LINE FEED
+	CALL	PCHAR	;
+	MVI	A,0AH	;
+PCHAR:	PUSH	B	;PRINT A CHARACTER ON THE CONSOLE
+	MOV	E,A	;
+	MVI	C,02H	;
+	CALL	BDOS	;
+	POP	B	;
+	RET		;
+;
+CRMSG:	PUSH	B	;PRINT A STRING PRECEDED BY A CR/LF
+	CALL	CRLFP	;
+	POP	H	;
+;
+PMSG:	MOV	A,M	;PRINT A STRING TERMINATED BY A NULL
+	ORA	A	;
+	RZ		;
+	INX	H	;
+	PUSH	H	;
+	CALL	PCHAR	;
+	POP	H	;
+	JMP	PMSG	;
+;
+RESET:	MVI	C,0DH	;RESET THE DISK SYSTEM
+	JMP	BDOS	;
+;
+SELDSK:	MOV	E,A	;SELECT DISK
+	MVI	C,0EH	;
+	JMP	BDOS	;
+;
+F1OPEN:	XRA	A	;OPEN FILE @ FCB, AND ZERO RECORD COUNTER
+	STA	FCB+32	;
+	LXI	D,FCB	;
+FOPEN:	MVI	C,0FH	;OPEN DISK FILE FOR READING OR WRITING
+BDOS6:	CALL	BDOS	; CALL TO BDOS W/ RETURN VALUE SAVED
+	STA	RETVAL	;
+	INR	A	;Set the ZFLAG for error condition
+	RET		;
+;
+FCLOSE:	MVI	C,10H	;CLOSE FILE AFTER READING OR WRITING
+	JMP	BDOS6	; CALL TO BDOS W/ RETURN VALUE
+;
+SRCHF1:	LXI	D,FCB	;SEARCH FOR FIRST OCCURENCE OF FILE
+SRCHF:	MVI	C,11H	;SEARCH FOR FIRST OCCURENCE OF FILE NAME
+	JMP	BDOS6	; CALL TO BDOS W/ RETURN VALUE
+;
+SRCHNX:	MVI	C,12H	;SEARCH FOR NEXT OCCURENCE OF FILE NAME
+	JMP	BDOS6	; CALL TO BDOS W/ RETURN VALUE
+;
+DELETF:	MVI	C,13H	;DELETE FILE FROM DIRECTORY
+	JMP	BDOS	;
+;
+READ1:	LXI	D,FCB	;READ ONE SECTOR USING 'FCB'
+READF:	MVI	C,14H	;READ ONE SECTOR FROM DISK
+BDOS7:	CALL	BDOS	; CALL TO BDOS W/ RETURN VALUE
+	ORA	A	;
+	RET		;
+;
+WRITEF:	MVI	C,15H	;WRITE ONE SECTOR TO DISK
+	JMP	BDOS7	; CALL TO BDOS W/ RETURN VALUE
+;
+CREATE:	MVI	C,16H	;CREATE A NEW FILE NAME IN DISK DIRECTORY
+	JMP	BDOS6	; CALL TO BDOS W/ RETURN VALUE
+;
+NEWNAM:	MVI	C,17H	;RENAME EXISTING FILE IN DISK DIRECTORY
+	JMP	BDOS	;
+;
+GETUSR:	MVI	E,0FFH	;GET CURRENT USER NUMBER
+;
+;	SET USER NUMBER TO VALUE IN (E), EXCEPT IF
+;	VALUE IS 0FFH.
+;
+USRSET:	MVI	C,20H	;
+	JMP	BDOS	;
+
+	PAGE
+;
+;	Set log-in byte for transient program with current
+;	user number in upper 4 bits and current drive in
+;	lower 4 bits.
+;
+SETLOG:	CALL	GETUSR	; SET LOG-IN BYTE W/ CURRENT DRIVE & USER NUMBER
+	ADD	A	;
+	ADD	A	;
+	ADD	A	;
+	ADD	A	;Shift user number to upper nibble
+	LXI	H,CRNDSK	;
+	ORA	M	;Combine with disk number
+	STA	INLOG	;Place where transient programs
+	RET		;  can find it.
+;
+;	LOG IN CURRENT DISK
+;	Place current drive number in log-in byte without
+;	including user number.
+;
+LOGCUR:	LDA	CRNDSK	;
+	STA	INLOG	;
+	RET		;
+;
+;	CONVERT lower case INPUT TO UPPER CASE
+;
+LCUC:	CPI	61H	;'a'
+	RC		;
+	CPI	7BH	;'z'+1
+	RNC		;
+	ANI	5FH	;MASK OFF BIT 5
+	RET		;
+
+	PAGE
+;
+;	COMMAND INPUT
+;
+;	IF SUBMIT FLAG <> 0 THEN INPUT FROM SUBMIT FILE\
+;		ELSE INPUT FROM KEYBOARD INPUT BUFFER
+;
+CMNDIN:	LDA	SUBFL	;CHECK SUBMIT FILE FLAG
+	ORA	A	;
+	JZ	LINEIN	;FLAG RESET: GET INPUT FROM KEYBOARD
+;
+;	NOTE ABOUT SUBMIT FILES:
+;
+;	When the command SUBMIT <filename>
+;	is given, a file named $$$.SUB is compiled with
+;	one command line per record in the file.
+;	the file is unusual in that the commands are stored
+;	in reverse order. This makes it simple for the
+;	following code to pull one command off at a time,
+;	erasing as it goes. Note that the sector counter is
+;	decremented and the file closed each time.
+;	When the last command has been executed, or if an
+;	error is encountered, the $$$.SUB file is erased
+;	and control reverts to the keyboard for input.
+;
+	LDA	CRNDSK	;FLAG SET: GET INPUT FROM SUBMIT FILE ON CURRENT DISK
+	ORA	A	;
+	MVI	A,00H	;
+	CNZ	SELDSK	;Set to disk 0 if not there already
+	LXI	D,SUBFCB	; Point to submit file's file control block
+	CALL	FOPEN	; Open the submit file for reading
+	JZ	LINEIN	;Go to console on Open File Error
+	LDA	SUBFCB+15	;Get top sector number
+	DCR	A	;Decrement? Yes $$$.SUB files are backwards
+	STA	SUBFCB+32	;Put number in Next Sector slot
+	LXI	D,SUBFCB	;
+	CALL	READF	;Read sector into buffer
+	JNZ	LINEIN	;Go to console on read error
+	LXI	D,INBLEN	;Point to start of keyboard buffer
+	LXI	H,DMAD	;Point to start of default buffer
+	MVI	B,LENSEC	;Set counter
+	CALL	MOVBLK	;Move line into keyboard buffer
+	LXI	H,SUBFCB+14	;
+	MVI	M,00H	;
+	INX	H	;
+	DCR	M	;Decrement sector count
+	LXI	D,SUBFCB	;close the file
+	CALL	FCLOSE	;
+	JZ	LINEIN	;Go to console on close error
+	LDA	CRNDSK	;
+	ORA	A	;
+	CNZ	SELDSK	;Set to current disk if not so already
+	LXI	H,BUFFER	;
+	CALL	PMSG	;Echo the $$$.SUB line to console
+	CALL	KSTAT	;Check for a keyboard break
+	JZ	LINP1	;NO BREAK- Continue
+	CALL	EXITSB	; BREAK- Close off submit mode
+	JMP	NXTCMD	;This leaves the return address on the
+			;stack, but NXTCMD re-initializes stack
+
+	PAGE
+;
+;	Get the input from the Console Device
+;
+LINEIN:	CALL	EXITSB	;RESET SUBMIT MODE FLAGS< ETC
+	CALL	SETLOG	; SET LOG-IN BYTE W/ CURRENT DRIVE & USER NUMBER
+	MVI	C,0AH	;BDOS COMMAND 10 ::= READ INPUT BUFFER
+	LXI	D,INPB	;POINT TO START OF INPUT BUFFER
+	CALL	BDOS	;GET A LINE FROM THE CONSOLE
+	CALL	LOGCUR	;
+LINP1:	LXI	H,INBLEN	;
+	MOV	B,M	;Move the line byte count into (B)
+LINP2:	INX	H	;Step through buffer changing lower
+	MOV	A,B	;case into upper case.
+	ORA	A	;
+	JZ	LINP3	;Exit when (B)=0
+	MOV	A,M	;
+	CALL	LCUC	;Convert lower case to UPPER CASE
+	MOV	M,A	;
+	DCR	B	;
+	JMP	LINP2	;Loop
+;
+LINP3:	MOV	M,A	;Poke a zero into end of line to mark end
+	LXI	H,BUFFER	;Save command starting address
+	SHLD	BPTR1	; for later use.
+	RET		;
+;
+;	KEYBOARD STATUS CHECK
+;	Return with ZFLAG set is no key pressed
+;	Else return with character in accumulator
+;
+KSTAT:	MVI	C,0BH	;
+	CALL	BDOS	;
+	ORA	A	;
+	RZ		;
+	MVI	C,01H	;
+	CALL	BDOS	;
+	ORA	A	;
+	RET		;
+
+	PAGE
+;
+;	INTEROGATE THE DISK
+;
+INTDSK:	MVI	C,19H	;
+	JMP	BDOS	;
+;
+;	SET THE DMA ADDRESS
+;
+SETDMA:	LXI	D,DMAD	;
+STDMA1:	MVI	C,1AH	;
+	JMP	BDOS	;
+;
+;	EXIT THE SUBMIT MODE
+;	Check to see if the Submit flag is set
+;	and reset it, along with the disk selection
+;	Erase any $$$.SUB file that may be in the directory
+;
+EXITSB:	LXI	H,SUBFL	;SUBMIT FILE FLAG
+	MOV	A,M	;
+	ORA	A	;
+	RZ		;Not in submit mode, exit
+	MVI	M,00H	;Reset submit flag
+	XRA	A	;
+	CALL	SELDSK	;Select correct disk
+	LXI	D,SUBFCB	;
+	CALL	DELETF	;Delete the $$$.SUB file from disk
+	LDA	CRNDSK	;
+	JMP	SELDSK	;Restore current disk and exit
+;
+;	GENERAL PURPOSE ERROR HANDLING ROUTINE
+;	Anything that you do wrong in entering a
+;	command lands you here. The command line
+;	is typed back at you for your edification
+;	and embarrassment. After you have been shown
+;	a '?', you are put back in the command mode.
+;
+WHAT:	CALL	CRLFP	;
+	LHLD	BPTR2	; Point to the offending command
+WHAT1:	MOV	A,M	; and print until a space or null is found
+	CPI	' '	;
+	JZ	WHAT2	;
+	ORA	A	;
+	JZ	WHAT2	;
+	PUSH	H	;
+	CALL	PCHAR	;
+	POP	H	;
+	INX	H	;
+	JMP	WHAT1	;
+;
+WHAT2:	MVI	A,'?'	; OK, what did you have in mind?
+	CALL	PCHAR	;
+	CALL	CRLFP	;
+	CALL	EXITSB	;
+	JMP	NXTCMD	; Back for another command.
+
+	PAGE
+;
+;	SPECIAL CHARACTER CHECK
+;	Returns with ZFLAG set if any of the special
+;	characters is found, or bombs you out if a
+;	control character is found. 
+;
+CHRCHK:	LDAX	D	;
+	ORA	A	;
+	RZ		;Exit on null
+	CPI	' '	;
+	JC	WHAT	;Bomb out on control character
+	RZ		;
+	CPI	'='	;
+	RZ		;
+	CPI	'_'	;
+	RZ		;
+	CPI	'.'	;
+	RZ		;
+	CPI	':'	;
+	RZ		;
+	CPI	';'	;
+	RZ		;
+	CPI	'<'	;
+	RZ		;
+	CPI	'>'	;
+	RET		;
+;
+;	STEP (DE) UNTIL A NULL OR NON-SPACE IS FOUND
+;	Return with the character in the accumulator.
+;
+STEP:	LDAX	D	;
+	ORA	A	;
+	RZ		;
+	CPI	20H	;' '
+	RNZ		;
+	INX	D	;
+	JMP	STEP	;
+;
+;	ADD THE ACCUMULATOR TO (HL)
+;	Return with the result in (HL)
+;
+ADDAH:	ADD	L	; (HL) <-  (HL) + (A)
+	MOV	L,A	;
+	RNC		;
+	INR	H	;
+	RET		;
+
+	PAGE
+;
+;	TRANSFER FILE CONTROL BLOCK
+;	This is a key subroutine that handles all
+;	of the setting up of file control blocks
+;	and of moving around the control buffer.
+;
+;	No entry parameters are passed in registers
+;	On exit (A) contains a count of the number of
+;	'?' wildcards in file control block and ZFLAG
+;	is set if this count =0 and FCB contains the
+;	file block. The input buffer pointer has been
+;	advanced to one beyond end of information used.
+;
+;	This subroutine is not only used to set up
+;	file control blocks, but also the numbers
+;	for SAVE and USER.
+;
+TRFCB:	MVI	A,00H	;Initial offset=0, primary entry point
+TRFCB1:	LXI	H,FCB	;(Alternate entry point, offset in (A))
+	CALL	ADDAH	;Point to current character in FCB
+	PUSH	H	;
+	PUSH	H	;Save pointer twice.
+	XRA	A	;
+	STA	TRDISK	;
+	LHLD	BPTR1	;Get current pointer to the input buffer
+	XCHG		;
+	CALL	STEP	;Get first non-blank character
+	XCHG		;
+	SHLD	BPTR2	;Save pointer in case of error
+	XCHG		;
+	POP	H	;Get FCB pointer
+	LDAX	D	;
+	ORA	A	;Check for null command
+	JZ	TRFCB2	;
+	SBI	40H	;Remove ASCII bias.
+	MOV	B,A	;Save possible disk number in (B)
+	INX	D	;
+	LDAX	D	;
+	CPI	':'	; This means that this is a disk number.
+	JZ	TRFCB3	; Go set transient disk.
+	DCX	D	; Get current logged in disk number.
+TRFCB2:	LDA	CRNDSK	;
+	MOV	M,A	;
+	JMP	TRFCB4	;
+;
+TRFCB3:	MOV	A,B	; Set transient disk number.
+	STA	TRDISK	;
+	MOV	M,B	; Put disk number into head of File Control Block.
+	INX	D	;
+;
+;	Move file name of up to 8 characters into bytes
+;	1 through 8 of FCB. Exit at reaching a special
+;	character or a null. Pad excess with blanks.
+;	If a '*' is found, fill the rest of the name block
+;	with '?'
+;
+TRFCB4:	MVI	B,08H	; Move file name of up to 8 Characters.
+TRFCB5:	CALL	CHRCHK	; Exit if a special character is found.
+	JZ	TRFCB9	; Go pad the rest of the block w/ ' '
+	INX	H	;
+	CPI	'*'	;This is a Wild card match
+	JNZ	TRFCB6	;
+	MVI	M,'?'	;This is an 'anything match'.
+	JMP	TRFCB7	;
+;
+TRFCB6:	MOV	M,A	;
+	INX	D	;
+TRFCB7:	DCR	B	;
+	JNZ	TRFCB5	;
+;
+TRFCB8:	CALL	CHRCHK	;Check for special character
+	JZ	TRFC10	;
+	INX	D	;
+	JMP	TRFCB8	;
+;
+TRFCB9:	INX	H	; Pad the rest of the file name with blanks.
+	MVI	M,' '	;
+	DCR	B	;
+	JNZ	TRFCB9	;
+;
+;	Move the file extention into bytes 9 through 11 of
+;	FCB. Pad excess with blancks, and fill with '?'
+;	in the same manner as the filename.
+;
+TRFC10:	MVI	B,03H	; Move a file type of up to 3 Characters.
+	CPI	'.'	;A period is the only legal special character in this case.
+	JNZ	TRFC15	;
+	INX	D	;
+TRFC11:	CALL	CHRCHK	; Check for special characters.
+	JZ	TRFC15	;
+	INX	H	;
+	CPI	'*'	;Wild card match- Pad the 3 bytes with ???
+	JNZ	TRFC12	;
+	MVI	M,'?'	;
+	JMP	TRFC13	;
+;
+TRFC12:	MOV	M,A	;Put the character into FCB
+	INX	D	;Advance FCB pointer
+TRFC13:	DCR	B	;Decrement character counter
+	JNZ	TRFC11	;Loop until counter is zero
+TRFC14:	CALL	CHRCHK	;Step buffer until special character,
+	JZ	TRFC16	;     or null is found.
+	INX	D	;
+	JMP	TRFC14	;
+;
+TRFC15:	INX	H	;Pad the rest of the extent with ' '
+	MVI	M,' '	;
+	DCR	B	;
+	JNZ	TRFC15	;
+;
+TRFC16:	MVI	B,03H	;Zero out bytes 12 through 14
+TRFC17:	INX	H	;
+	MVI	M,00H	;
+	DCR	B	;
+	JNZ	TRFC17	;
+;
+	XCHG		;
+	SHLD	BPTR1	;Save the input buffer pointer
+	POP	H	;(HL) = FCB
+	LXI	B,11	;Set counter
+TRFC18:	INX	H	;Count number of '?' in filename.ext
+	MOV	A,M	;
+	CPI	'?'	;
+	JNZ	TRFC19	;Skip if not'?'
+	INR	B	;
+TRFC19:	DCR	C	;
+	JNZ	TRFC18	;
+	MOV	A,B	;Move '?' count into (A)
+	ORA	A	;Set flags to indicate ambigous filename
+	RET		;
+
+	PAGE
+;
+;	COMMAND NAME LIST
+;
+CMNDL:	DB	'DIR '	;Read directory
+	DB	'ERA '	;Erase file
+	DB	'TYPE'	;Output named file to console
+	DB	'SAVE'	;Save named file on disk
+	DB	'REN '	;Rename file
+	DB	'USER'	;Set user number
+
+	PAGE
+;
+;	COMMAND SEARCH
+;
+;	Try to match command name starting at FCB + 1
+;	with those in the intrinsic command list.
+;	Exit with command number (0 to 5) in (A) if a
+;	match has been made, else exit with a 6 in (A)
+;	signifying that this may be a transient command.
+;
+CSRCH:	LXI	H,CMNDL	; Point to start of command list.
+	MVI	C,00H	; Zero out command counter.
+CSRCH1:	MOV	A,C	; Check counter for maximum number of tries.
+	CPI	6	;(There are 6 intrinsic commands + transients)
+	RNC		; Return is no match in six tries. It is a transient command.
+	LXI	D,FCB+1	; Point to start of command to be matched.
+	MVI	B,04H	; Maximum number of characters in command name.
+CSRCH2:	LDAX	D	;
+	CMP	M	;
+	JNZ	CSRCH3	; No match- exit loop.
+	INX	D	;
+	INX	H	;
+	DCR	B	;
+	JNZ	CSRCH2	; Back for another match.
+	LDAX	D	; Found the command, now check for a separating space.
+	CPI	' '	;
+	JNZ	CSRCH4	; No space, try for something else.
+	MOV	A,C	; Put command count in accumulator.
+	RET		; Exit routine with command number.
+;
+CSRCH3:	INX	H	; Step forwards to that start of the next command name.
+	DCR	B	;
+	JNZ	CSRCH3	;
+CSRCH4:	INR	C	; Bump command counter by one.
+	JMP	CSRCH1	; Back for another try.
+
+	PAGE
+;
+;	******************************
+;	MAIN OPERATING ROUTINE FOR CCP
+;	******************************
+;
+;	Entry point number 1
+;	Input buffer counter is zeroed out so no imbedded
+;	command can be executed on initial boot up.
+;
+CCP0:	XRA	A	;
+	STA	INBLEN	;
+;
+;
+;	Entry point number 2
+;	Entry a this point allows commands inbedded in
+;	input buffer to be automatically executed
+;	on initial boot up.
+;
+;	On entry (C) has user number in the high nibble
+;	and the disk drive in the lower nibble
+;
+CCP1:	LXI	SP,STACK	;Set up loacal stack
+	PUSH	B	;Save entry parameter
+	MOV	A,C	;
+	RAR		;Move upper 4 bits down
+	RAR		;
+	RAR		;
+	RAR		;
+	ANI	0FH	;Extract user number from input parameter
+	MOV	E,A	;
+	CALL	USRSET	;Put user number in its place
+	CALL	RESET	;Reset disk system
+	STA	SUBFL	;SUBMIT FILE FLAG
+	POP	B	;Get back entry parameter
+	MOV	A,C	;
+	ANI	0FH	;Extract disk drive number from input parameter
+	STA	CRNDSK	;Set to correct disk drive
+	CALL	SELDSK	;
+	LDA	INBLEN	;
+	ORA	A	;Check to see if there is anything in the input buffer
+	JNZ	CCP2	;There is, so don't bother with input.
+;
+;	RE-ENTRY POINT FOR NEXT COMMAND
+;
+NXTCMD:	LXI	SP,STACK	; Reset stack, and put out a prompt so
+				; that you know what disk you are operating on.
+	CALL	CRLFP	;
+	CALL	INTDSK	;Get drive number
+	ADI	'A'	;Add  ASCII bias
+	CALL	PCHAR	;
+	MVI	A,'>'	;Prompt character
+	CALL	PCHAR	;
+	CALL	CMNDIN	; Input the next command line from the console or submit file.
+CCP2:	LXI	D,DMAD	;Set to the default DMA (0080H)
+	CALL	STDMA1	;
+	CALL	INTDSK	;Check disk drive
+	STA	CRNDSK	;
+	CALL	TRFCB	;Put command name in FCB
+	CNZ	WHAT	;Ambigous filename.ext No good
+	LDA	TRDISK	;
+	ORA	A	;
+	JNZ	TRANS	;Transient command
+	CALL	CSRCH	;Find command in command list
+	LXI	H,CMNDT	;Point to command vector table
+	MOV	E,A	;Put command number in (DE)
+	MVI	D,00H	;
+	DAD	D	;
+	DAD	D	;(HL) <-- CMNDT + 2 * Command number
+	MOV	A,M	;Move command vector into (HL)
+	INX	H	;
+	MOV	H,M	;
+	MOV	L,A	;
+	PCHL		;Go forth and execute the command.
+;
+;	COMMAND VECTOR TABLE
+;
+CMNDT:	DW	DIR	;Display directory
+	DW	ERA	;Erase file
+	DW	TYPE	;Type file to console
+	DW	SAVE	;Save file on disk
+	DW	REN	;Rename file
+	DW	USER	;Set user number
+	DW	TRANS	;Load and execute transient command
+
+	PAGE
+;
+;	FILE READ ERROR
+;
+RDERR:	LXI	B,MSG1	;Load pointer to message
+	JMP	CRMSG	;Display message & return
+;
+MSG1:	DB	'READ ERROR',0
+;
+;	FILE NOT FOUND ERROR
+;
+NFERR:	LXI	B,MSG2	;Load pointer to message
+	JMP	CRMSG	;Display message & return
+;
+MSG2:	DB	'NO FILE',0
+
+	PAGE
+;
+;	DECIMAL TO BINARY CONVERSION
+;	Used by SAVE and USER
+;
+;	NOTE:
+;
+;	There is some inefficient code in this subroutine
+;	TRFCB will move the numbers into FCB and pad the
+;	rest of the block with ' '. The number can be 3
+;	digits long at most, so that the elaborate stepping
+;	past blanks, etc is not needed. Code that can be
+;	revised is marked by '*'
+;
+DECIML:	CALL	TRFCB	;Move numbers into FCB
+	LDA	TRDISK	;
+	ORA	A	;
+	JNZ	WHAT	;
+	LXI	H,FCB+1	;
+	LXI	B,11	;8 NUMBER FILE NAME & 3 CHAR EXT
+DEC1:	MOV	A,M	;
+	CPI	' '	;
+	JZ	DEC2	;
+	INX	H	;
+	SUI	'0'	;REMOVE ASCII BIAS
+	CPI	10	;
+	JNC	WHAT	;
+	MOV	D,A	;
+	MOV	A,B	;*
+	ANI	0E0H	;*
+	JNZ	WHAT	;*
+	MOV	A,B	;*
+	RLC		;MULTIPLY BY 10
+	RLC		;
+	RLC		;
+	ADD	B	;
+	JC	WHAT	;Overflow
+	ADD	B	;
+	JC	WHAT	;Overflow
+	ADD	D	;
+	JC	WHAT	;Overflow
+	MOV	B,A	;
+	DCR	C	;*
+	JNZ	DEC1	;* Should be JMP DEC1
+	RET		;*
+;
+DEC2:	MOV	A,M	;*Step over blanks to end of block
+	CPI	' '	;*
+	JNZ	WHAT	;*
+	INX	H	;*
+	DCR	C	;*
+	JNZ	DEC2	;*
+	MOV	A,B	;Return with binary value in (A)
+	RET		;
+
+	PAGE
+;
+;	BLOCK MOVE
+;	Source      :: ((HL))
+;	Destination :: ((DE))
+;	Count       ::  (B)
+;
+MOVE3:	MVI	B,03H	;3 byte move
+MOVBLK:	MOV	A,M	;Source
+	STAX	D	;Destination
+	INX	H	;
+	INX	D	;
+	DCR	B	;Counter
+	JNZ	MOVBLK	;
+	RET		;
+;
+;	SET DIRECTORY POINTER
+;	Point to (DMAD) + (C) + (A)
+;	Return with character in (A)
+;
+;	On entry (C) contains directory entry offset
+;	i.e. 00H, 20H, 40H, or 60H.
+;	Accumulator (A) contains number of the byte
+;	within the directory that the pointer is to
+;	be set to.
+;
+PTRDIR:	LXI	H,DMAD	;Point to start of directory sector
+	ADD	C	;Add byte number to directory offset
+	CALL	ADDAH	;  then add the result to (HL)
+	MOV	A,M	;  and get the byte pointed to.
+	RET		;
+;
+;	SET TO TRANSIENT DISK
+;	Set the disk specified by (TRDISK) for
+;	reading or writing. If (TRDISK) = (CURDISK), you
+;	are already on the right disk, so no change is needed
+;
+SETTRD:	XRA	A	;
+	STA	FCB	;Set first byte of FCB to 0
+	LDA	TRDISK	;
+	ORA	A	;Check to see if transient disk= 0
+	RZ		;OK- no change needed
+	DCR	A	;
+	LXI	H,CRNDSK	;Now check current disk
+	CMP	M	;
+	RZ		;OK- no change needed
+	JMP	SELDSK	;Disk different, so go get right one
+;
+;	SET CURRENT DISK
+;	Restore the current logged-in disk as the read/write
+;	disk. If already on the proper disk, no action is required
+;
+SETCUR:	LDA	TRDISK	;
+	ORA	A	;
+	RZ		;OK- On log-in disk, no change
+	DCR	A	;
+	LXI	H,CRNDSK	;
+	CMP	M	;
+	RZ		;OK
+	MOV	A,M	;On different disk.
+	JMP	SELDSK	;  so go make change
+
+	PAGE
+;
+;	START OF INTRINSIC COMMANDS
+;
+;	*******************************
+;	DIR SEARCHES FILE DIRECTORY FOR
+;	FILES BY FILE NAME OR FILE TYPE
+;	     ? MATCHES ANY LETTER
+;	* MATCHES THE WHOLE FILENAME OR
+;	          FILETYPE
+;	*******************************
+;
+;	NOTE ON SYSTEM FILES:
+;	'System' type files are rendered invisible to the
+;	DIR command because the MSB of the second byte of
+;	the file ext is set. A minor change in the following
+;	code could make these files listable in the Directory
+;
+DIR:	CALL	TRFCB	; TRANSFER THE COMMAND LINE INTO 005CH.
+	CALL	SETTRD	; SET TO TRANSIENT DISK
+	LXI	H,FCB+1	; POINT TO START OF FILE NAME
+	MOV	A,M	; CHECK FOR A BLANK
+	CPI	20H	;' '
+	JNZ	DIR1	; NOT BLANK, GO FIND WHAT IS WANTED.
+;
+	MVI	B,11	; BLANK ::= DISPLAY ENTIRE DIRECTORY
+DIR0:	MVI	M,3FH	; FILL ENTIRE FILENAME/TYPE ARE WITH WILDCARD [?]'?'
+	INX	H	;
+	DCR	B	;
+	JNZ	DIR0	;
+;
+DIR1:	MVI	E,00H	; SEARCH FOR FILE.
+	PUSH	D	;
+	CALL	SRCHF1	;
+	CZ	NFERR	; <NOT FOUND> ERROR
+DIR2:	JZ	DIR10	;
+	LDA	RETVAL	;Get directory entry number
+	RRC		;Convert to directory block pointer
+	RRC		;by multiplying by 32 and masking off
+	RRC		;the excess
+	ANI	60H	;
+	MOV	C,A	;Stash block pointer
+	MVI	A,10	;
+	CALL	PTRDIR	;Get character @ DMAD + block pointer + 10 = Second char of ext
+	RAL		;Check for MSB set :: SYSTEM file
+	JC	DIR9	;Skip- System files are not listed by DIR
+	POP	D	;
+	MOV	A,E	;
+	INR	E	;
+	PUSH	D	;
+	ANI	03H	;Check for every 4th directory item
+	PUSH	PSW	;
+	JNZ	DIR3	;Not the 4th
+	CALL	CRLFP	; 4th, so start new line and mark
+	PUSH	B	; with disk drive letter
+	CALL	INTDSK	;Get disk number
+	POP	B	;
+	ADI	'A'	;Print the disk number & colon at the
+	CALL	PCHAR	;start of each directory print line
+	MVI	A,':'	;
+	CALL	PCHAR	;
+	JMP	DIR4	;
+;
+DIR3:	CALL	SPACE	;Print a space/colon/space between
+	MVI	A,':'	;directory items
+	CALL	PCHAR	;
+DIR4:	CALL	SPACE	;
+	MVI	B,01H	;
+;
+;	The code in this area is somewhat tangled
+;	Space could be saved by redoing some of the
+;	ways that pointers are set up. Currently the
+;	pointer to the directory entry is recomputed
+;	for each byte. Why not just load (HL) once
+;	and increment?
+;
+DIR5:	MOV	A,B	;Print the filename.ext to the console
+	CALL	PTRDIR	;Point to byte and reurn w/ byte in (A)
+	ANI	7FH	;
+	CPI	' '	;
+	JNZ	DIR7	;
+	POP	PSW	;
+	PUSH	PSW	;
+	CPI	03H	;Check for file ext end
+	JNZ	DIR6	;
+	MVI	A,09H	;Check for file name end
+	CALL	PTRDIR	;
+	ANI	7FH	;
+	CPI	' '	;Check for no file ext
+	JZ	DIR8	;
+DIR6:	MVI	A,' '	;Separator between filename & ext
+DIR7:	CALL	PCHAR	;
+	INR	B	;
+	MOV	A,B	;
+	CPI	12	;File ext end +1
+	JNC	DIR8	;
+	CPI	9	;File name end +1
+	JNZ	DIR5	;
+	CALL	SPACE	;
+	JMP	DIR5	;
+;
+DIR8:	POP	PSW	;
+DIR9:	CALL	KSTAT	;CHECK KEY BOARD, ANY KEY BREAKS
+	JNZ	DIR10	;Exit on break
+	CALL	SRCHNX	;Look for another directory item
+	JMP	DIR2	;Loop back for more
+;
+DIR10:	POP	D	;
+	JMP	COMEND	;EXIT
+
+	PAGE
+;
+;	******************************************************
+;	ERASE FILES FROM DISK
+;
+;	'*' and '?' can be used the same as in 'DIR'
+;	Does not actually wipe out information from the disk,
+;	but merely has the first byte of the file control block
+;	set to 0E5H. This routine in CCP merely sets up the
+;	file names to be erased; the real work is done by BDOS
+;	******************************************************
+;
+ERA:	CALL	TRFCB	;Set up the file control block
+	CPI	11	;If 11 '?' are in the FCB then you are
+	JNZ	ERA1	;asking to erase the whole disk. *.*
+	LXI	B,MSG3	;Ask for verification before proceeding
+	CALL	CRMSG	;
+	CALL	CMNDIN	;Get keyboard entry
+	LXI	H,INBLEN	;check for return without entry
+	DCR	M	;
+	JNZ	NXTCMD	;Abort on empty line
+	INX	H	;
+	MOV	A,M	;
+	CPI	'Y'	;Yes, proceed with erasing everything
+	JNZ	NXTCMD	;Chickened out
+	INX	H	;
+	SHLD	BPTR1	;
+ERA1:	CALL	SETTRD	;set the transient disk
+	LXI	D,FCB	;Point to the file control block
+	CALL	DELETF	;Call the routine that calls th e BDOS erase
+	INR	A	;Check the return parameter
+	CZ	NFERR	;Warn if item not found
+	JMP	COMEND	;EXIT
+;
+MSG3:	DB	'ALL (Y/N)?',0
+
+	PAGE
+;
+;	***********************************
+;	OUTPUT NAMED FILE TO THE CONSOLE
+;	File name.ext must be unconditional
+;	***********************************
+;
+TYPE:	CALL	TRFCB	;Set up file name in FCB
+	JNZ	WHAT	;Badly formed filename: ambigous
+	CALL	SETTRD	;Set the disk
+	CALL	F1OPEN	;Open the file for reading
+	JZ	TYPE4	;Error on opening
+	CALL	CRLFP	;
+	LXI	H,TYPCTR	;Initiate counter
+	MVI	M,0FFH	;
+TYPE1:	LXI	H,TYPCTR	;
+	MOV	A,M	;Get the buffer counter
+	CPI	80H	;Check for end of buffer
+	JC	TYPE2	;Not at end, get character from buffer
+;
+;	At end of buffer- Read from disk
+;
+	PUSH	H	;Read a sector from disk to the buffer
+	CALL	READ1	;
+	POP	H	;
+	JNZ	TYPE3	;RETURN VALUE <> 0. End of file or bad read
+	XRA	A	;
+	MOV	M,A	;Zero (TYPCTR)
+TYPE2:	INR	M	;
+	LXI	H,DMAD	;
+	CALL	ADDAH	;Point to character
+	MOV	A,M	;Get the character
+	CPI	1AH	;Check for end of file
+	JZ	COMEND	;EXIT
+	CALL	PCHAR	;Not EOF, output the byte to the console
+	CALL	KSTAT	;Check for keyboard break
+	JNZ	COMEND	;EXIT ON ANY KEY
+	JMP	TYPE1	;Back for the next letter
+;
+;	(A) = 1	:: End of file
+;	(A) = 2	:: Read error
+;
+TYPE3:	DCR	A	;
+	JZ	COMEND	;EXIT AT END OF FILE
+	CALL	RDERR	;
+TYPE4:	CALL	SETCUR	;
+	JMP	WHAT	;
+
+	PAGE
+;
+;	**********************************
+;	SAVE CREATES DISK FILE FROM MEMORY
+;	STARTING AT 0100H.  256 BYTE PAGES
+;	  FILENAME MUST BE UNCONDITIONAL
+;	IF A FILE OF THE SAME NAME & TYPE
+;	  ALREADY EXISTS, IT IS ERASED.
+;	**********************************
+;
+SAVE:	CALL	DECIML	;GET THE NUMBER OF PAGES TO BE SAVED
+	PUSH	PSW	;
+	CALL	TRFCB	;SET UP THE FILE NAME
+	JNZ	WHAT	;Cannot be ambigous file
+	CALL	SETTRD	;SET UP DISK
+	LXI	D,FCB	;
+	PUSH	D	;
+	CALL	DELETF	;DELETE OLD FILE OF SAME NAME
+	POP	D	;
+	CALL	CREATE	;CREATE A NEW FILE IN DIRECTORY
+	JZ	SAVE3	;
+	XRA	A	;
+	STA	FCB+32	;ZERO OUT SECTOR COUNTER
+	POP	PSW	;
+	MOV	L,A	;
+	MVI	H,00H	;CHECK PAGE COUNTER
+	DAD	H	;
+	LXI	D,TPA	;
+SAVE1:	MOV	A,H	;CHECK PAGE COUNTER
+	ORA	L	;
+	JZ	SAVE2	;EXIT, LAST PAGE HAS BEEN WRITTEN
+	DCX	H	;
+	PUSH	H	;SAVE COUNTER
+	LXI	H,LENSEC	;ADVANCE DMA LOCATION
+	DAD	D	;BY ONE SECTOR
+	PUSH	H	;
+	CALL	STDMA1	;SET THE DMA ADDRESS
+	LXI	D,FCB	;
+	CALL	WRITEF	;WRITE THE SECTOR TO DISK
+	POP	D	;
+	POP	H	;
+	JNZ	SAVE3	;ERROR CONDITION
+	JMP	SAVE1	;LOOP BACK TO WRITE ANOTHER SECTOR
+;
+SAVE2:	LXI	D,FCB	;CLOSE THE FILE TO MAKE IT OFFICIAL
+	CALL	FCLOSE	;
+	INR	A	;CHECK FOR GOOD CLOSING
+	JNZ	SAVE4	;OK
+SAVE3:	LXI	B,MSG4	;<NO SPACE> ERROR
+	CALL	CRMSG	;
+SAVE4:	CALL	SETDMA	;
+	JMP	COMEND	;EXIT
+;
+MSG4:	DB	'NO SPACE',0
+
+	PAGE
+;
+;	*******************************************
+;	RENAME A FILE		      THE FORMAT IS
+;	<NEW FILENAME>.<TYPE>=<OLD FILENAME>.<TYPE>
+;	    A '_' may be substituted for the '='
+;	*******************************************
+;
+REN:	CALL	TRFCB	;Put new filename into FCB
+	JNZ	WHAT	;Cannot be ambigous filename
+	LDA	TRDISK	;Get the disk number
+	PUSH	PSW	;
+	CALL	SETTRD	;Log into the correct disk
+	CALL	SRCHF1	;Check to see if such a name exists
+	JNZ	FEERR	;ERROR- File name already used
+	LXI	H,FCB	;Move new filename to upper half of FCB
+	LXI	D,FCB+16	;
+	MVI	B,10H	;
+	CALL	MOVBLK	;
+	LHLD	BPTR1	;Back to input buffer
+	XCHG		;
+	CALL	STEP	;
+	CPI	'='	;Check for proper separator
+	JZ	REN1	;OK
+	CPI	'_'	;
+	JNZ	TYPE4	;NO GOOD
+REN1:	XCHG		;
+	INX	H	;Step over separartor
+	SHLD	BPTR1	;Store pointer for TRFCB to use
+	CALL	TRFCB	;Move name.type of Old file into place
+	JNZ	TYPE4	;Error- cannot be ambigous
+	POP	PSW	;Get back disk number
+	MOV	B,A	;
+	LXI	H,TRDISK	;
+	MOV	A,M	;
+	ORA	A	;
+	JZ	REN2	;OK- current disk=transient disk
+	CMP	B	;Check disk number
+	MOV	M,B	;Save back into TRDISK
+	JNZ	TYPE4	;Error
+REN2:	MOV	M,B	;
+	XRA	A	;
+	STA	FCB	;Zero in FCB :: Logged in disk
+	CALL	SRCHF1	;Does old file exist?
+	JZ	REN3	;NO- <NO FILE> Error
+	LXI	D,FCB	;OK- Rename it
+	CALL	NEWNAM	;	via call to BDOS
+	JMP	COMEND	;EXIT
+;
+REN3:	CALL	NFERR	;<NO FILE> Error
+	JMP	COMEND	;EXIT
+;
+;	FILE EXISTS ERROR
+;
+FEERR:	LXI	B,MSG6	;Load error message pointer
+	CALL	CRMSG	;Display maessage
+	JMP	COMEND	;EXIT
+;
+MSG6:	DB	'FILE EXISTS',0
+
+	PAGE
+;
+;	************************************
+;	SET THE USER NUMBER FROM THE CONSOLE
+;	  Nobody uses this in one-user CP/M
+;	************************************
+;
+USER:	CALL	DECIML	;Convert number to binary
+	CPI	10H	;Must be 0 to 15
+	JNC	WHAT	;Out of range
+	MOV	E,A	;Set in place for BDOS call
+	LDA	FCB+1	;Check for blank 'filename'
+	CPI	' '	;
+	JZ	WHAT	;Error
+	CALL	USRSET	;Set via BDOS
+	JMP	CMEND1	;EXIT
+
+	PAGE
+;
+;	*************************************************
+;	TRANS LOADS A PROGRAM INTO THE TPA IF IT IS NOT A
+;	COMMAND NAME,  AND A PROPER  <FILENAME>.COM  FILE
+;		  EXISTS ON THE TRANSIENT DISK.
+;	*************************************************
+;
+TRANS:	LDA	FCB+1	; SPACE ::= NO FILE NAME PRESENT.
+	CPI	' '	;
+	JNZ	TRANS1	;OK- Filename present
+	LDA	TRDISK	;NG- Just clean things up and leave
+	ORA	A	;
+	JZ	CMEND1	;EXIT IF ON THE LOGIN DISK
+	DCR	A	;
+	STA	CRNDSK	;OTHERWISE LOG BACK TO THE LOGIN DISK
+	CALL	LOGCUR	;
+	CALL	SELDSK	;
+	JMP	CMEND1	;AND GO BACK FOR ANOTHER COMMAND
+;
+TRANS1:	LXI	D,FCB+9	; CHECK THE FILE TYPE.
+	LDAX	D	;
+	CPI	' '	;
+	JNZ	WHAT	; YOU'RE NOT SUPPOSED TO HAVE A FILE TYPE W/ A TRANSIENT.
+PATCH1:	PUSH	D	;
+	CALL	SETTRD	; SET TO TRANSIENT DRIVE.
+	POP	D	;
+	LXI	H,COM	; MOVE FILE TYPE "COM" INTO FCB.
+	CALL	MOVE3	;
+	CALL	F1OPEN	; OPEN FILE FOR READING.
+	JNZ	PAT2	; NORMAL PATH
+	LXI	H,TRDISK ; GET DRIVE FROM CURRENT COMMAND
+	ORA	M	; ACCUM WAS 0 ON ENTRY, SO THIS FETCHES DRIVE
+	JNZ	TYPE4	; COMMAND HAS EXPLICIT DRIVE...GIVE ERROR
+	INR	M	; FORCE EXPLICITE REFERENCE TO DRIVE A
+	LXI	D,FCB+9	; WE NEED TO SET UP DE WHEN WE
+	JMP	PATCH1	; RE-ENTER CCP
+;
+PAT2:	LXI	H,TPA	; STARTING POINT FOR PROGRAM LOADING.
+	;
+TRANS2:	PUSH	H	; MOVE PROGRAM INTO TPA SECTOR BY SECTOR.
+	XCHG		;
+	CALL	STDMA1	; POINT TO LOADING LOCATION.
+	LXI	D,FCB	;
+	CALL	READF	; READ 1 SECTOR INTO MEMORY.
+	JNZ	TRANS3	; ZFLAG RESET ::= GOOD READ, GO AROUND FOR MORE.
+	POP	H	;
+	LXI	D,LENSEC	;
+	DAD	D	; ADVANCE POINTER FOR NEXT SECTOR.
+	LXI	D,ORIGIN	; CHECK FOR PROGRAM OVERLAPPING CCP AREA.
+	MOV	A,L	;
+	SUB	E	;
+	MOV	A,H	;
+	SBB	D	;
+	JNC	LDERR	; ERROR CONDITION, PROGRAM TOO BIG FOR MEMORY.
+	JMP	TRANS2	; BACK FOR NEXT SECTOR.
+;
+TRANS3:	POP	H	; CLEAR STACK.
+	DCR	A	; 1 ::= END OF FILE (GOOD) OR 2 ::= READ ERROR (BAD).
+	JNZ	LDERR	; READ ERROR.
+	CALL	SETCUR	; SET BACK TO CURRENT DRIVE.
+	CALL	TRFCB	; MOVE ANY FURTHER FCB'S AT 005CH AND 006CH.
+	LXI	H,TRDISK	;
+	PUSH	H	;
+	MOV	A,M	;Put transient disk number into
+	STA	FCB	;  first byte of file control block.
+	MVI	A,16	;Set offset for TRFCB to upper half of FCB
+	CALL	TRFCB1	;Move seconf file name into FCB + 16
+	POP	H	;
+	MOV	A,M	;Get transient disk number of second FN
+	STA	FCB+16	;  and insert it into FCB + 16
+	XRA	A	;Zero out sector counter
+	STA	FCB+32	;
+	LXI	D,DFCB	;Move filenames to default FCB
+	LXI	H,FCB	;
+	MVI	B,33	;File control block & sector counter
+	CALL	MOVBLK	;
+;
+	LXI	H,BUFFER	;Start at the head of buffer
+TRANS4:	MOV	A,M	;Step until blank or null found
+	ORA	A	; i.e. step over transient name
+	JZ	TRANS5	;
+	CPI	' '	;
+	JZ	TRANS5	;
+	INX	H	;
+	JMP	TRANS4	;Loop
+;
+TRANS5:	MVI	B,00H	;Command line byte counter
+	LXI	D,DMAD+1	;
+TRANS6:	MOV	A,M	;Move command line into default buffer
+	STAX	D	;
+	ORA	A	;Exit on null
+	JZ	TRANS7	;
+	INR	B	;Bump counter
+	INX	H	;
+	INX	D	;
+	JMP	TRANS6	;
+;
+TRANS7:	MOV	A,B	;Put buffer counter at start
+	STA	DMAD	; of default buffer
+	CALL	CRLFP	;
+	CALL	SETDMA	;Set DMA to default buffer
+	CALL	SETLOG	; SET LOG-IN BYTE W/ CURRENT DRIVE & USER NUMBER
+	CALL	TPA	; GO OUT AND RUN THE PROGRAM.
+	LXI	SP,STACK	; RESTORE STACK ON RETURN.
+	CALL	LOGCUR	;Log back to the current disk
+	CALL	SELDSK	;
+	JMP	NXTCMD	; READY FOR ANOTHER ASSIGNMENT.
+;
+;	LOAD ERROR
+;
+LDERR:	LXI	B,MSG7	;Load the error pointer
+	CALL	CRMSG	;Display the message
+	JMP	COMEND	;EXIT
+;
+MSG7:	DB	'BAD LOAD',0
+;
+COM:	DB	'COM'	; FILE TYPE FOR TRANSIENT COMMANDS.
+
+	PAGE
+;
+;	COMMAND END
+;		CLEAN-UP AND EXIT POINT FOR ALL COMMANDS
+;		EXCEPT TRANSIENT COMMANDS.
+;
+COMEND:	CALL	SETCUR	;PRIMARY EXIT POINT
+CMEND1:	CALL	TRFCB	;SECONDARY EXIT POINT
+	LDA	FCB+1	; CHECK FOR FURTHER COMMANDS.
+	SUI	' '	;
+	LXI	H,TRDISK	;
+	ORA	M	;
+	JNZ	WHAT	;
+	JMP	NXTCMD	; BACK TO THE  RATRACE.
+;
+;	END OF THE PROGRAM AREA
+;
+	PAGE
+;
+;	START OF PARAMETER STORAGE AREA
+;
+	DS	16	;STACK AREA
+STACK:	EQU	$	;CCP STACK
+;
+SUBFL:	DS	1	; SUBMIT FLAG. FLAG SET WHEN COMMANDS COME FROM $$$.SUB FILE.
+SUBFCB:	DB	0,'$$$     SUB',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+FCB:	DS	33	;FILE CONTROL BLOCK FOR CCP READ/WRITE
+RETVAL:	DS	1	; VALUE RETURNED IN (A) FROM CALLS TO BDOS.
+CRNDSK:	DS	1	; CURRENT LOGGED IN DISK.
+TRDISK:	DS	1	; CURRENT TRANSIENT DISK.
+TYPCTR:	DS	1	; INPUT BUFFER COUNTER USED BY 'TYPE' TO KEEP TRACK
+			; OF INPUT DISK BUFFER.
+PADOUT:	DS	75	;PAD OUT THE CCP TO THE PAGE BOUNDERY
+;
+;
+;	******************************************
+;
+;             RELOCATABLE ASSEMBLY OF MYBDOS
+;
+;	******************************************
+;		 LAST  REVISION: 03 JULY 84
+;	******************************************
+;
+;
+;	The points still being puzzled out are:
+;
+;	1.  The use of the null block mask for non 8" s.d.
+;	disk systems.
+;
+;	2.  The use of the upper 3 bits of FILE CONTROL
+;	BLOCK Byte 12 (extent byte). This is tied in with
+;	the null block mask mentioned in #1 above.
+;
+;	3.  The full use of the 3- 16 bit parameters in each
+;	disk parameter block. The vectors to these 3 items are
+;	DWORD1, DWORD2 & DWORD3. These are set to 0000H when
+;	BIOS is first loaded. ((DWORD1)) is set to 0003H by 
+;	LOGIN, and ((DWORD2)) & ((DWORD3)) are set to 0000H by
+;	SETDIR which in in turn is called by LOGIN and SERCHF.
+;	No explanation for these parameters is given in the
+;	Digital Research documentation.
+;
+;	4.  The setting and resetting of the MSB of FCB byte
+;	14. The bit is set when the file is opened, and when
+;	each extent is opened. It is reset when a sector is
+;	is written, or when the random read/write parameters
+;	are set up. This may be some sort of flag to prevent
+;	trying to read a write file. More digging into this
+;	is required.
+;
+;	5.  The reason for FCB Byte 13 being skipped during
+;	a directory file name search. The Digital Reasearch
+;	documentation merely says that the byte is for int-
+;	ernal use only, and that it is always set to 00H.
+;	Does  the skipping of this byte mean that it is used
+;	for some purpose in MP/M, or is this something reser-
+;	ved for future use in a subsequent release?
+;
+;
+;Note that if files of the same name are present on both USER 0 and
+;the logged-in USER number, the OPEN, SEARCH for FIRST, SEARCH for NEXT
+;and READ SEQUENTIAL functions will match directory entries on a first-come
+;first-served basis.  This will cause exciting results if multiple extent
+;files of the same name are present on both USER 0 and logged-in USER.
+;
+;Recommended use:
+;
+;	1) Keep on USER 0 only commonly used programs (Files.COM)
+;	2) Set these programs to $SYS to reduce directory clutter.
+;	3) Set these programs to $R/O to avoid accidental erasure of
+;	   invisible programs.
+;	4) NEVER place on any other USER number programs of the same name.
+;	5) Have turn-key applications cold-boot directly into the assigned
+;	   USER number.  The USER number is the high nibble of address 4.
+;
+;	EQUATES
+;
+REBOOT:	EQU	0000H	;REBOOT CP/M VIA VECTOR @ 0000H
+IOBYTE:	EQU	0003H	;I/O ALLOCATION BYTE
+DDMA:	EQU	0080H	;DEFAULT DMA ADDRESS
+SECLEN:	EQU	0080H	;STANDARD CP/M SECTOR LENGTH= 128
+;
+CR:	EQU	0DH	;CARRIAGE RETURN
+LF:	EQU	0AH	;LINE FEED
+TAB:	EQU	09H	;TAB
+BCKSPA:	EQU	08H	;BACKSPACE
+RUBOUT:	EQU	7FH	;DELETE
+;
+VER:	EQU	2	;CP/M VERSION
+REL:	EQU	2	;CP/M RELEASE
+REV:	EQU	0	;REVISION
+SNH:	EQU	00	;SERIAL NUMBER, HIGH. 2 DIGITS
+SNL:	EQU	0000	;SERIAL  NUMBER, LOW. 4 DIGITS
+;
+;
+	PUBLIC	@BDOS
+;
+	EXTRN	@CBOOT,@WBOOT,@CONST,@CONIN,@CONOUT
+	EXTRN	@LIST,@PUNCH,@READER,@LISTST
+	EXTRN	@HOME,@SELDSK,@SETTRK,@SETSEC,@SETDMA
+	EXTRN	@READ,@WRITE,@SECTRN
+;
+FBASE:	
+SERNO:	DB	SNH	;HIGH DIGITS OF SERIAL NUMBER
+	DB	VER*10+REL	;
+	DW	REV	;
+	DB	SNL/256,SNL MOD 256	;
+;
+;	NOTE:
+;		The user must insert the proper serial numbers
+;		into BDOS since these numbers are checked by
+;		MOVECPM when creating a new system.
+;		Failure to have matching serial numbers will
+;		cause an error condition.
+;
+;	MAIN BDOS ENTRY POINT.
+;	ALL CALL ARE ROUTED THROUGH HERE BY
+;	VECTOR LOCATED AT 0005H
+;
+@BDOS:
+;BDOS:	JMP	BDOS1	;JUMP OVER ERROR VECTORS TO START
+;
+;	ERROR HANDLER VECTORS
+;
+ERR1:	DW	BSERR	;<BAD   SECTOR   ERROR>
+ERR2:	DW	SELER1	;<DISK  SELECT   ERROR>
+ERR3:	DW	ROERR	;<DISK READ ONLY ERROR>
+ERR4:	DW	ROERR1	;<FILE READ ONLY ERROR>
+;
+;	STARTING POINT OF BASIC DISK OPERATING SYSTEM
+;
+BDOS1:	XCHG		;
+	SHLD	ENTPAR	;SAVE ENTRY PARAMETER FROM (DE)
+	XCHG		;
+	MOV	A,E	;
+	STA	PARAM1	;ALSO SAVE CONTENTS OF (E)
+	LXI	H,0000	;
+	SHLD	RETPAR	;ZERO OUT RETURN PARAMETER
+	DAD	SP	;
+	SHLD	PSTACK	;SAVE CALLING PROGRAM STACK POINTER
+	LXI	SP,BSTACK	;SET UP BDOS STACK
+	XRA	A	;
+	STA	DISKNO	;ZERO OUT DISK NUMBER
+	STA	SETUPF	; & DISK SETUP FLAG
+	LXI	H,BDOS2	;PUT EXIT POINT ADDRESS UP FOR
+	PUSH	H	; USE WHEN COMMAND IS COMPLETED
+	MOV	A,C	;MOVE COMMAND NUMBER INTO (A)
+	CPI	29H	;CHECK FOR VALID COMMAND NUMBER
+	RNC		;NO GOOD- THERE ARE ONLY 40 COMMANDS
+	MOV	C,E	;
+	LXI	H,COMTAB	;POINT TO START OF COMMAND TABLE
+	MOV	E,A	;
+	MVI	D,00H	;
+	DAD	D	;
+	DAD	D	;POINT TO COMMAND VECTOR
+	MOV	E,M	;
+	INX	H	;
+	MOV	D,M	;MOVE COMMAND VECTOR INTO (DE)
+	LHLD	ENTPAR	;GET BACK ORIGINAL ENTRY CONTENTS OF (DE)
+	XCHG		;SWAP 'EM
+	PCHL		;THEN GO OFF TO DO THE COMMAND
+;
+;	BDOS COMMAND VECTOR TABLE
+;
+;	Contains vectors for 40 commands, including two
+;	reserved spaces for future commands, and two
+;	undocumented commands. Commands marked '*' are
+;	different from the similarly numbered commands
+;	in CP/M 1.4
+;
+COMTAB:	DW	@WBOOT	;   BIOS CALL/WARM BOOT
+	DW	COM01	;   CONSOLE INPUT
+	DW	COM02	;   CONSOLE OUTPUT
+	DW	COM03	;   TAPE READER INPUT
+	DW	@PUNCH	;   BIOS CALL/PUNCH DEVICE OUTPUT
+	DW	@LIST	;   BIOS CALL/LIST DEVICE OUTPUT
+	DW	COM06	;*  DIRECT CONSOLE I/O
+	DW	COM07	;   GET I/O BYTE
+	DW	COM08	;   SET I/O BYTE
+	DW	COM09	;   PRINT STRING
+	DW	COM10	;*  READ CONSOLE BUFFER
+	DW	COM11	;   GET CONSOLE STATUS
+	DW	COM12	;*  RETURN VERSION NUMBER
+	DW	COM13	;   RESET DISK SYSTEM
+	DW	COM14	;   SELECT DISK DRIVE
+	DW	COM15	;*  OPEN FILE
+	DW	COM16	;   CLOSE FILE
+	DW	COM17	;*  SEARCH FOR FIRST OCCURENCE
+	DW	COM18	;   SEARCH FOR NEXT OCCURENCE
+	DW	COM19	;*  DELETE FILE
+	DW	COM20	;   READ SEQUENTIAL FILE
+	DW	COM21	;   WRITE SEQUENTIAL FILE
+	DW	COM22	;*  MAKE FILE
+	DW	COM23	;*  RENAME FILE
+	DW	COM24	;   RETURN LOG-IN VECTOR
+	DW	COM25	;   RETURN CURRENT DISK NUMBER
+	DW	COM26	;   GET DMA ADDRESS
+	DW	COM27	;   INTEROGATE DISK ALLOCATION
+	DW	COM28	;*  WRITE PROTECT DISK
+	DW	COM29	;*  GET R/O VECTOR ADDRESS
+	DW	COM30	;*  SET FILE ATTRIBUTES
+	DW	COM31	;*  GET DISK PARAMETER ADDRESS
+	DW	COM32	;*  SET USER/GET USER NUMBER
+	DW	COM33	;*  READ RANDOM FILE
+	DW	COM34	;*  WRITE RANDOM FILE
+	DW	COM35	;*  COMPUTE FILE SIZE
+	DW	COM36	;*  SET RAMDOM RECORD LENGTH
+	DW	COM37	;** UNDOCUMENTED COMMAND
+	DW	DUMMY	;** RESERVED FOR FUTURE USE
+	DW	DUMMY	;** RESERVED FOR FUTURE USE
+	DW	COM40	;** UNDOCUMENTED COMMAND
+;
+;	BDOS ERROR HANDLING ROUTINES
+;
+BSERR:	LXI	H,ERMSG2	;<BAD SECTOR ERROR>
+	CALL	ERRMSG	;
+	CPI	03H	;CHECK FOR A CONTROL C
+	JZ	REBOOT	;
+	RET		;
+;
+SELER1:	LXI	H,ERMSG3	;<DISK SELECT ERROR>
+	JMP	ROERR2	;
+;
+ROERR:	LXI	H,ERMSG5	;<DISK READ ONLY ERROR>
+	JMP	ROERR2	;
+;
+ROERR1:	LXI	H,ERMSG4	;<FILE READ ONLY ERROR>
+ROERR2:	CALL	ERRMSG	;
+	XRA	A	; CLEAR A TO POINT TO DISK 'A'
+	STA 	DISKNO	; STORE IN DISK LOCATION
+	JMP	REBOOT	;
+;
+;	ERROR MESSAGE STRINGS
+;
+ERMSG0:	DB	'Bdos Err On  : $'
+ERMSG1:	EQU	ERMSG0+12	;
+;
+ERMSG2:	DB	'Bad Sector$'	;
+;
+ERMSG3:	DB	'Select$'	;
+;
+ERMSG4:	DB	'File R/O$'	;
+ERMSG5:	EQU	ERMSG4+5	;
+;
+;	PRINT OUT THE ERROR MESSAGE
+;
+ERRMSG:	PUSH	H	;SAVE THE POINTER
+	CALL	PCRLF	;START A NEW LINE
+	LDA	CURDSK	;GET THE CURRENT DISK NUMBER
+	ADI	'A'	;ADD THE ASCII BIAS+1
+	STA	ERMSG1	;POKE INTO ERROR MESSAGE
+	LXI	B,ERMSG0	;POINT TO ERROR MESSAGE
+	CALL	PRNSTR	;PRINT ERROR MESSAGE STRING
+	POP	B	;GET BACK ORIGINAL POINTER
+	CALL	PRNSTR	;  AND PRINT THAT STRING TOO.
+;
+;	CONSOLE KEYBOARD INPUT
+;
+INPUT:	LXI	H,KYBDFL;SWAP THE CONTENTS OF THE KEYBOARD FLAG BYTE
+	MOV	A,M	;WITH A 00
+	MVI	M,00H	;
+	ORA	A	;
+	RNZ		;RETURN IF SOMETHING ALREADY THERE
+	JMP	@CONIN	;ELSE GET SOMETHING VIA A BIOS CALL  TO CONSOLE INPUT
+;
+INCHR:	CALL	INPUT	;GET A CHARACTER FROM KEYBOARD
+	CALL	SETFLG	;CHECK TO SEE IF IS A COTROL CHARACTER
+	RC		;RETURN IF IT IS
+	PUSH	PSW	;ELSE ECHO IT TO THE CONSOLE
+	MOV	C,A	; (AND PERHAPS THE LIST DEVICE)
+	CALL	COM02	;CONSOLE OUTPUT
+	POP	PSW	;
+	RET		;
+;
+;	SET THE CARRY FLAG IF A CONTROL CHARACTER OTHER THAN
+;	CR, LF, TAB OR BACKSPACE IS ENCOUNTERED
+;
+SETFLG:	CPI	CR	;
+	RZ		;
+	CPI	LF	;
+	RZ		;
+	CPI	TAB	;
+	RZ		;
+	CPI	BCKSPA	;
+	RZ		;
+	CPI	' '	;
+	RET		;
+;
+;	CHECK TO KEYBOARD STATUS TO SEE IF THERE IS
+;	SOMETHING TO REPORT
+;
+KBSTAT:	LDA	KYBDFL	;CHECK THE FLAG
+	ORA	A	;
+	JNZ	KBSTA2	;SOMETHING ALREADY ON HAND
+;
+	CALL	@CONST	;BIOS CALL/CONSOLE STATUS
+	ANI	01H	;CHECK LSB ONLY
+	RZ		;NOTHING, SO JUST RETURN
+;
+	CALL	@CONIN	;BIOS CALL/CONSOLE INPUT
+	CPI	' '	;CHECK FOR A SPACE
+	JNZ	KBSTA1	;EXIT ON SPACE
+	CALL	@CONIN	;BIOS CALL/CONSOLE INPUT
+	CPI	03H	;CHECK AGAIN FOR A CONTROL C
+	JZ	REBOOT	;REBOOT IF THE IS ^C
+	XRA	A	; ELSE CLEAR THE EVIDENCE
+	RET		;  AND EXIT
+;
+KBSTA1:	STA	KYBDFL	;MARK THE FLAG 'IN USE'
+KBSTA2:	MVI	A,01H	; SET RETURN BYTE
+	RET		;
+;
+;	OUTPUT ONE CHARACTER TO THE CONSOLE OUTPUT DEVICE
+;	(AND TO THE LIST DEVICE IF THE ^P FLAG IS SET)
+;
+;	CHARACTER TO BE OUTPUT IS RECEIVED IN (C)
+;
+OUTPUT:	LDA	CHCTR1	;
+	ORA	A	;
+	JNZ	OUTPT1	;
+	PUSH	B	;
+	CALL	KBSTAT	;
+	POP	B	;
+	PUSH	B	;
+	CALL	@CONOUT	;BIOS CALL/CONSOLE OUTPUT
+	POP	B	;
+	PUSH	B	;
+	LDA	LISTFL	;CHECK TO SEE IF LIST DEVICE IS SET
+	ORA	A	;
+	CNZ	@LIST	; IT IS SO DO A BIOS CALL TO LIST DEVICE OUTPUT
+	POP	B	;
+OUTPT1:	MOV	A,C	;
+	LXI	H,CHRCTR	;
+	CPI	RUBOUT	;DON'T COUNT RUBOUTS
+	RZ		;
+	INR	M	;BUMP CHARACTER COUNTER
+	CPI	' '	;
+	RNC		;OK- IT WAS A PRINTABLE CHARACTER
+	DCR	M	;UNDO WHAT YOU JUST DID
+	MOV	A,M	;** SUPERFLOUS CODE!
+	ORA	A	;** SET FLAG LIKE IT WAS SET BY DCR M
+	RZ		;
+	MOV	A,C	;
+	CPI	BCKSPA	;CHECK FOR A BACKSPACE
+	JNZ	OUTPT2	;
+	DCR	M	;DECREASE COUNTER IF BACKSPACE
+	RET		;
+;
+OUTPT2:	CPI	LF	;ZERO OUT CHARACTER COUNTER IF
+	RNZ		;A LINE FEED IS FOUND, ELSE JUST
+	MVI	M,00H	;RETURN TO CALLER
+	RET		;
+;
+;	CHARACTER OUTPUT
+;
+;	CHARACTER TO BE PRINTED RECEIVED IN (C)
+;
+;	PRINTS CONTROL CHARACTERS AS ^[LETTER]
+;	EXPANDS TABS TO 8 BYTE BOUNDARIES
+;
+OUTCHR:	MOV	A,C	;
+	CALL	SETFLG	;
+	JNC	COM02	; NOT A CONTROL CHAR SO JUST DO CONSOLE OUTPUT
+	PUSH	PSW	;STASH THE CHARACTER
+	MVI	C,'^'	;PRINT AN UP-ARROW
+	CALL	OUTPUT	;
+	POP	PSW	;GET CHARACTER BACK
+	ORI	40H	;REPLACE ASCII BIAS
+	MOV	C,A	;
+COM02:	MOV	A,C	;CONSOLE OUTPUT
+	CPI	TAB	;
+	JNZ	OUTPUT	;NOT A TAB, JUST OUTPUT
+OUTCH2:	MVI	C,' '	; IT WAS A TAB, SPACE TO NEXT 8 BYTE STOP.
+	CALL	OUTPUT	;
+	LDA	CHRCTR	;CHECK THE COUNTER
+	ANI	07H	;
+	JNZ	OUTCH2	;NOT AT EVEN LOCATION, DO ANOTHER
+	RET		;
+;
+;	BLANK OUT THE CURRENT CURSOR POSITION
+;	BY BACKSPACE, SPACE.
+;
+BLANK:	CALL	BLANK1	;
+	MVI	C,' '	;
+	CALL	@CONOUT	;BIOS CALL/CONSOLE OUTPUT
+BLANK1:	MVI	C,BCKSPA	;
+	JMP	@CONOUT	;BIOS CALL/CONSOLE OUTPUT
+;
+;	BREAK OUT OF THE CURRENT DISPLAY LINE AND
+;	START A NEW LINE. USED BY ^U (ABORT LINE),
+;	AND ^R (RETYPE LINE) IN CONSOLE BUFFER INPUT.
+;
+BREAK:	MVI	C,'#'	;MARK THE EXIT POINT
+	CALL	OUTPUT	;
+	CALL	PCRLF	;START A NEW LINE
+BREAK1:	LDA	CHRCTR	;OUTPUT BLANKS UNTIL COUNTERS MATCH
+	LXI	H,CHCTR2	;
+	CMP	M	;
+	RNC		;
+	MVI	C,' '	;
+	CALL	OUTPUT	;
+	JMP	BREAK1	;
+;
+;	STANDARD CARRIAGE RETURN/LINE FEED SUBROUTINE
+;
+PCRLF:	MVI	C,CR	;
+	CALL	OUTPUT	;
+	MVI	C,LF	;
+	JMP	OUTPUT	;
+;
+;	BDOS COMMAND #10....READ THE CONSOLE BUFFER
+;	ON ENTRY (DE) POINTS TO START OF THE BUFFER
+;	FIRST BYTE OF BUFFER CONTAINS THE MAXIMUM
+;	ALLOWABLE LINE LENGTH. SECOND BYTE WILL
+;	CONTAIN CURRENT BUFFER LENGTH ON RETURN.
+;
+COM10:	LDA	CHRCTR	;
+	STA	CHCTR2	;
+	LHLD	ENTPAR	;WHY? YOU ALREADY HAVE THIS IN (DE)!
+	MOV	C,M	;PUT MAXIMUM COUNT IN (C)
+	INX	H	;
+	PUSH	H	;SAVE START+1
+	MVI	B,00H	;ZERO THE CURRENT CHARACTER COUNTER
+;
+;	TOP OF INPUT LINE LOOP
+;
+LLOOP:	PUSH	B	;
+	PUSH	H	;
+LINE1:	CALL	INPUT	;GET A CHAR FROM KEYBOARD
+	ANI	7FH	;STRIP OFF MSB
+	POP	H	;
+	POP	B	;
+	CPI	CR	;
+	JZ	LINE16	;EXIT ON <CR> OR <LF>
+	CPI	LF	;
+	JZ	LINE16	;
+	CPI	BCKSPA	;
+	JNZ	LINE2	;
+	MOV	A,B	;
+	ORA	A	;
+	JZ	LLOOP	;DO NOTHING IF AT START OF LINE
+	DCR	B	;
+	LDA	CHRCTR	;
+	STA	CHCTR1	;
+	JMP	LINE9	;
+;
+LINE2:	CPI	RUBOUT	;RUBOUT?
+	JNZ	LINE3	;
+	MOV	A,B	;
+	ORA	A	;
+	JZ	LLOOP	;DO NOTHING IF AT START OF A LINE
+	MOV	A,M	;
+	DCR	B	;
+	DCX	H	;
+	JMP	LINE14	;
+;
+;	CONTROL E....OUTPUT A CR/LF TO THE CONSOLE, BUT
+;			DON'T INSERT IT INTO THE LINE
+;
+LINE3:	CPI	05H	;^E
+	JNZ	LINE4	;
+	PUSH	B	;
+	PUSH	H	;
+	CALL	PCRLF	;
+	XRA	A	;
+	STA	CHCTR2	;
+	JMP	LINE1	;
+;
+;	CONTROL P....SET THE LIST DEVICE FLAG SO THAT
+;		ALL CONSOLE OUTPUT IS ALSO SENT TO
+;		THE LIST DEVICE.
+;
+LINE4:	CPI	10H	;^P
+	JNZ	LINE5	;
+	PUSH	H	;
+	LXI	H,LISTFL	;
+	MVI	A,01H	;
+	XRA	M	;
+	MOV	M,A	;
+	POP	H	;
+	JMP	LLOOP	;
+;
+;	CONTROL X....BACKSPACE OVER THE CONSOLE LINE
+;	AND RESTART THE LINE INPUT. THIS SOUNDS LIKE
+;	A NICE IDEA, BUT THINGS GET SCREWED UP BY
+;	BACKSPACING THEN RETYPING AT TAB LOCATIONS,
+;	AND BY CONTROL CHARACTERS BEING DISPLAYED AS
+;	TWO CHARACTERS, BUT STORED IN MEMORY AS ONLY
+;	ONE CHARACTER. IN SHORT, EXPECT TO SEE A MESS
+;	EVERY SO OFTEN. CONTROL U IS REALLY BETTER.
+;
+LINE5:	CPI	18H	;^X
+	JNZ	LINE7	;
+	POP	H	;
+LINE6:	LDA	CHCTR2	;WIPE OUT CHARACTERS UNTIL THE COUNTERS MATCH
+	LXI	H,CHRCTR	;
+	CMP	M	;
+	JNC	COM10	;THEY MATCH, SO RESTART CONSOLE INPUT
+	DCR	M	;
+	CALL	BLANK	;DESTRUCTIVE BACKSPACE
+	JMP	LINE6	;
+;
+;	CONTROL U....ABORT OUT OF CURRENT INPUT LINE
+;	AND START OVER AGAIN.
+;
+LINE7:	CPI	15H	;^U
+	JNZ	LINE8	;
+	CALL	BREAK	;ECHO A '#' AND A CR/LF
+	POP	H	;GET BACK POINTER TO START OF BUFFER
+	JMP	COM10	; AND START ALL OVER AGAIN.
+;
+;	CONTROL R....DROP DOWN TO NEW LINE AND RETYPE
+;	THE CONTENTS OF THE CONSOLE BUFFER. USEFULL
+;	TO CLEAN UP MESS MADE WHEN BACKSPACING HAS
+;	SCREWED UP THE TAB COUNT OR CONTROL CHARACTER DISPLAY
+;
+LINE8:	CPI	12H	;^R
+	JNZ	LINE13	;
+LINE9:	PUSH	B	;SAVE THE CHARACTER COUNT
+	CALL	BREAK	;OUTPUT A '#' AND CR/LF
+	POP	B	;
+	POP	H	;GET BACK POINTER TO START OF LINE
+	PUSH	H	;   AND RESAVE IT.
+	PUSH	B	;RESAVE CHARACTER COUNT
+;
+;	RETYPE UNTIL COUNT IN (B) IS 0
+;
+LINE10:	MOV	A,B	;
+	ORA	A	;
+	JZ	LINE11	;
+	INX	H	;
+	MOV	C,M	;
+	DCR	B	;
+	PUSH	B	;
+	PUSH	H	;
+	CALL	OUTCHR	;
+	POP	H	;
+	POP	B	;
+	JMP	LINE10	;
+;
+LINE11:	PUSH	H	;
+	LDA	CHCTR1	;
+	ORA	A	;
+	JZ	LINE1	;
+	LXI	H,CHRCTR	;
+	SUB	M	;
+	STA	CHCTR1	;
+LINE12:	CALL	BLANK	;
+	LXI	H,CHCTR1	;
+	DCR	M	;
+	JNZ	LINE12	;
+	JMP	LINE1	;
+;
+LINE13:	INX	H	;
+	MOV	M,A	;STORE CHARACTER IN INPUT BUFFER
+	INR	B	;INCREMENT CURRENT COUNTER
+LINE14:	PUSH	B	;
+	PUSH	H	;
+	MOV	C,A	;ECHO CHARACTER TO CONSOLE OUTPUT
+	CALL	OUTCHR	;
+	POP	H	;
+	POP	B	;
+	MOV	A,M	;CHECK TO SEE IF A CONTROL C HAS
+	CPI	03H	;  BEEN SNUCK IN ON US.
+	MOV	A,B	;
+	JNZ	LINE15	;NOPE- CONTINUE ON OUR WAY
+	CPI	01H	;YEP- DO A REBOOT ONLY IF AT THE
+	JZ	REBOOT	;     HEAD OF A LINE.
+LINE15:	CMP	C	;CHECK THE CURRENT LINE COUNT AGAINST MAXIMUM.
+	JC	LLOOP	;OK- THERE'S STILL ROOM, BACK FOR MORE
+;
+;	EXIT POINT....WE GET HERE BY A <CR>, A <LF> OR
+;		IF THE LINE IS AT THE MAXIMUM.
+;
+LINE16:	POP	H	;RESTORE POINTER TO HEAD OF LINE
+	MOV	M,B	;STASH THE LINE COUNT IN IT
+	MVI	C,CR	;  AND DO A CARRIAGE RETURN TO
+	JMP	OUTPUT	;    MARK OUR DEPARTURE
+;
+;	BDOS COMMAND #1....GET A CHARACTER FROM THE KEYBOARD
+;		ECHO IT TO THE CONSOLE UNLESS IT IS A
+;		CONTROL CHARACTER.
+;
+COM01:	CALL	INCHR	;CONSOLE INPUT
+	JMP	EXIT1	;
+;
+;	BDOS COMMAND #3....READ ONE CHARACTER FROM THE
+;		PAPER TAKE READER ATTACHED TO YOUR
+;		ASR-33 TELETYPE. (YOU OWN ONE OF THOSE
+;		BEASTS, AND USE IT AS YOUR PRIMARY CONSOLE
+;		DEVICE DON'T YOU?)
+;
+COM03:	CALL	@READER	;INPUTBIOS CALL/TAPE READER INPUT
+	JMP	EXIT1	;
+;
+;	BDOS COMMAND #6....DIRECT CONSOLE I/O
+;
+;	PARAMETER PASSED IN (C)
+;	IF (C)= 0FFH THEN DIRECT CONSOLE INPUT IS MADE
+;		i.e. returns (A)=0 if console is not ready
+;			else (A)=ASCII input character
+;	IF (C)<>0FFH THEN (C) IS ASSUMED TO BE A VALID ASCII
+;		CHARACTER, AND IT IS OUTPUT TO THE CONSOLE.
+;
+;	NOTE:
+;		The lines marked ** don't make sense to me.
+;		Why would an entrance parameter of 0FEH,
+;		which is an invalid ASCII character cause a
+;		console status request?
+;
+COM06:	MOV	A,C	;Check the entry parameter.
+	INR	A	;
+	JZ	DIRINP	;It was 0FFH, direct input.
+	INR	A	;
+	JZ	@CONST	;**(Why this call on (C)=0FEH?) BIOS CALL/CONSOLE STATUS
+	JMP	@CONOUT	;BIOS CALL/CONSOLE OUTPUT
+;
+DIRINP:	CALL	@CONST	;BIOS CALL/CONSOLE STATUS
+	ORA	A	;
+	JZ	BDOS3	;Key not pressed, exit emptyhanded.
+	CALL	@CONIN	;Got one. BIOS CALL/CONSOLE INPUT
+	JMP	EXIT1	;Go stuff it into (RETPAR) and exit.
+;
+;	BDOS COMMAND #7....GET THE I/O BYTE AND RETURN IT
+;		TO A PROGRAM THAT IS NOT BRIGHT ENOUGH TO
+;		KNOW THAT IT IS ALWAYS AT (0003H) AND COULD
+;		HAVE GOTTEN IT WITH A SIMPLE LDA 0003H
+;		INSTEAD OF GOING THROUGH BDOS.
+;
+COM07:	LDA	IOBYTE	;GET I/O BYTE LOCATED AT 0003H
+	JMP	EXIT1	;
+;
+;	BDOS COMMAND #8....SET I/O BYTE
+;		SAME COMMENTS AS FOR COM07.
+;
+COM08:	LXI	H,IOBYTE	;SET I/O BYTE LOCATED AT 0003H
+	MOV	M,C	;
+	RET		;
+;
+;	BDOS COMMAND #9....PRINT STRING TO THE CONSOLE
+;		UNTIL A '$' OR A 0 IS FOUND.
+;
+;	COMMENT:
+;		The use of '$', or for that matter any printable
+;		character, is inconvenient. Business programs
+;		cannot use this command if a dollar sign is to
+;		be printed in the string. The proper way to
+;		mark the end of a literal is with a null or
+;		by setting MSB.
+;
+COM09:	XCHG		;MOVE POINTER TO START OF STRING FROM
+	MOV	C,L	;(DE) TO (HL), AND THEN TO (BC). WHY
+	MOV	B,H	;THE GRAND TOUR??
+;
+;	PRINT A STRING UNTIL A '$' IS FOUND
+;
+PRNSTR:	LDAX	B	;
+	CPI	'$'	;END OF STRING MARKER
+	RZ		;
+	CPI	0H	;OR NULL AS END OF STRING MARK
+	RZ		;
+	INX	B	;
+	PUSH	B	;
+	MOV	C,A	;
+	CALL	COM02	;CONSOLE OUTPUT
+	POP	B	;
+	JMP	PRNSTR	;
+;
+;	BDOS COMMAND #11....GET CONSOLE INPUT STATUS
+;		RETURNS 00 IF NO KEY PRESSED, ELSE 01
+;
+;	NOTE:
+;		This command is not quite compatible with
+;		CP/M 1.4 or 2.0 because if a ' ' is pressed
+;		the console then waits for another input,
+;		and reboots if that input is ^C. If the
+;		second input is not ^C, then Command 11
+;		returns like nothing happened, but has
+;		swallowed the ' '. This does strange things
+;		with some older CPMUG programs like Tiny
+;		Basic with polled Command 11 until a key
+;		was pressed. If you try some of these
+;		programs which ran fine under 1.4, but
+;		do strange things under 2.2, this may be
+;		the place to look.
+;
+COM11:	CALL	KBSTAT	;GET CONSOLE STATUS
+EXIT1:	STA	RETPAR	; STORE THE RETURN PARAMETER
+DUMMY:	RET		;(USED AS EXIT POINT FOR COM38 AND
+			;COM39)
+;
+;	COMMAND EXIT POINT THAT SETS RETURN PARAMETER= 01H
+;
+EXIT2:	MVI	A,01H	;
+	JMP	EXIT1	;
+;
+;	PARAMETER STORAGE AREA #1
+;
+CHCTR1:	DB	0	;CHARACTER COUNTER #1,
+			;USED IN READ CONSOLE BUFFER
+CHCTR2:	DB	0	;CHARACTER COUNTER #2,
+			;USED IN READ CONSOLE BUFFER
+CHRCTR:	DB	0	;OUTPUT LINE CHARACTER COUNTER,
+			;USED TO KEEP COUNT FOR TAB CHARACTER.
+LISTFL:	DB	0	;LIST DEVICE FLAG. WHEN <> 00,
+			;OUTPUT GOES TO LIST DEVICE.
+KYBDFL:	DB	0	;KEYBOARD STATUS FLAG. IF <> 0 THEN
+			;CHARACTER IS AVAILABLE.
+PSTACK:	DW	0000	;CALLING PROGRAM STACK POINTER
+	DS	48	;BDOS STACK AREA
+BSTACK:	EQU	$	;BDOS' OWN STACK POINTER
+USERNO:	DB	0	;CURRENT USER NUMBER STORAGE
+CURDSK:	DB	0	;CURRENT DISK NUMBER STORAGE
+ENTPAR:	DW	0000	;ENTRY PARAMETER
+RETPAR:	DW	0000	;RETURN PARAMETER
+;
+;	ERROR HANDLING ROUTINES
+;
+;	NOTE:
+;		Again we see that convoluted nature of this
+;		program. Why don't the error calls from the
+;		program just jump to the code just following
+;		command table instead of this intermedeate 
+;		step of picking up an inderect jump vector?
+;
+SELERR:	LXI	H,ERR2	;DISK SELECT ERROR
+;
+ERROR:	MOV	E,M	;Move (Vector) to (DE)
+	INX	H	;
+	MOV	D,M	;
+	XCHG		;Swap it to (HL)
+	PCHL		; and do the indirect jump
+;
+;	BLOCK MOVE SUBROUTINE
+;
+;	ENTRY PARAMETERS:
+;		(HL)	DESTINATION
+;		(DE)	SOURCE
+;		(C)	BYTE COUNT
+;
+;	NOTE:
+;		Z80 users may want to eliminate this and
+;		use LDIR with a suitable swapping of the
+;		HL and DE register pairs & using (BC)
+;		of just (C) as the counter.
+;
+BLKMOV:	INR	C	;
+BLMOV1:	DCR	C	;
+	RZ		;
+	LDAX	D	;
+	MOV	M,A	;
+	INX	D	;
+	INX	H	;
+	JMP	BLMOV1	;
+;
+;	SET UP DISK PARAMETERS WHEN LOGGIN IN A NEW DISK
+;
+;	THE VARIOUS PARAMETERS FROM BIOS ARE MOVE TO
+;	WHERE BDOS CAN USED THEM. THE LOCATION  OF THE
+;	DISK SIZE, DIRECTORY TRACK ETC. ARE MOVED TO
+;	A PARAMETER BLOCK AT THE END OF BDOS.
+;
+;	NOTE:
+;		1.  If the program involves much action
+;		between disk drives, considerable time
+;		can be wasted in this swapping process.
+;		This may be an area where improvemnts
+;		can be made.
+;
+;		2.  If the disk is not a single sided,
+;		double density 5 1/4" or a single density
+;		8", and can thus hold more than 255K, then
+;		the block numbers must be double precision
+;		and will occupy 2 bytes. Consequently a
+;		single directory extent can only hold 8
+;		block numbers, and therefore 8K if 1K
+;		blocks are used. In order to get enough
+;		directory space either the number of
+;		directory entries must be increased, or
+;		the block size increased to 2K. For
+;		more details on this read the Digital
+;		Research documentation (and you will
+;		get thoroughly confused).
+;
+SETDSK:	LDA	CURDSK	;GET THE NUMBER OF THE DISK
+	MOV	C,A	;
+	CALL	@SELDSK	;BIOS CALL/SELECT DISK DRIVE
+	MOV	A,H	;IF SELDSK RETURNS (HL)= 0000H
+	ORA	L	;YOU ARE TRYING TO ACCESS A
+	RZ		;NONEXISTENT DRIVE. ERROR RETURN.
+;
+;	LEGAL DRIVE- LET'S SET THINGS UP
+;
+;	SELDSK RETURNS WITH POINTER TO START OF DISK
+;	PARAMETER BLOCK IN (HL). THE BLOCK CONTAINS
+;	8 DATA WORDS:
+;			DW	TRANS	;START OF SECTOR TRANS  TABLE
+;			DW	DWORD1	;
+;			DW	DWORD2	;
+;			DW	DWORD3	;
+;			DW	DIRBUF	;DIRECTORY BUFFER LOCATION
+;			DW	DPBLK	;DISK PARAMETER BLOCK LOCATION
+;			DW	CHKxx	;CHECK VECTOR, DRIVE xx
+;			DW	ALLxx	;ALLOCATION BLOCK VECTOR, DRIVE xx
+;
+	MOV	E,M	;
+	INX	H	;
+	MOV	D,M	;(DE) <-- ((TRANS))
+	INX	H	;
+	SHLD	DWORD1	;
+	INX	H	;
+	INX	H	;
+	SHLD	DWORD2	;
+	INX	H	;
+	INX	H	;
+	SHLD	DWORD3	;
+	INX	H	;
+	INX	H	;
+	XCHG		;
+	SHLD	SECTBL	;
+;	
+;	(DE) NOW POINTS TO DIRBUF IN PARAMETER TABLE.
+;	THE FOLLOWING ARE NOW MOVED INTO BDOS PARAMETER AREA:
+;
+;	(DIRBUF)	POINTER TO DIRECTORY BUFFER
+;	(DPBLK)		POINTER TO DISK PARAMETER BLOCK
+;	(CHKxx)		POINTER TO DIRECTORY CHECKSUM BLOCK
+;	(ALLxx)		POINTER TO ALLOCATION BLOCK MAP
+;
+	LXI	H,DIRBPT	;DIRECTORY BUFFER POINTER
+	MVI	C,08H	;
+	CALL	BLKMOV	;
+;
+;	THE DISK PARAMETER BLOCK IS NOW MOVED INTO
+;	BDOS'S PARAMETER AREA. THIS BLOCK IS 15
+;	BYTES LONG AND CONTAINS THE FOLLOWING:
+;	(VALUES GIVEN ARE FOR 8" SINGLE DENSITY)
+;
+;		DW	26	;SECTORS PER TRACK
+;		DB	3	;BLOCK SHIFT FACTOR
+;		DB	7	;BLOCK MASK
+;		DB	0	;NULL MASK
+;		DW	242	;DISK SIZE -1
+;		DW	63	;DIRECTORY ENTRIES -1
+;		DB	192	;ALLOC 0
+;		DB	0	;ALLOC 1
+;		DB	2	;DIRECTORY TRACK OFFSET
+;
+	LHLD	DPBLK	;
+	XCHG		;
+	LXI	H,SECTRS ;SECTORS PER TRACK=
+			;HEAD OF DP BLOCK
+	MVI	C,0FH	;
+	CALL	BLKMOV	;
+;
+;	DETERMINE IF WE ARE ON A 5 1/4" OR SINGLE DENSITY
+;	8" DISK WHICH HAS A CAPACITY OF LESS THAN 256 K
+;	OR IF WE ARE ON A BIG DISK THAT REQUIRES A DOUBLE
+;	PRECISION BLOCK NUMBER.
+;
+	LHLD	DSKSIZ	;DISK SIZE, # OF 1K BLOCKS -1
+	MOV	A,H	;
+	LXI	H,BIGDSK	;8" SD: 0FFH, LARGE CAP DISK: 00H
+	MVI	M,0FFH	;
+	ORA	A	;
+	JZ	SETDS1	;
+	MVI	M,00H	;
+SETDS1:	MVI	A,0FFH	;
+	ORA	A	;SET ZFLAG TO MARK NON-ERROR RETURN
+	RET		;
+;
+;	HOME THE DRIVE HEAD AND ZERO OUT SOME PARAMETERS
+;	IN PREPARATION FOR DIRECTORY OPERATIONS.
+;
+SETDIR:	CALL	@HOME	;BIOS CALL/MOVE DISK HEAD TO TRACK 00
+	XRA	A	;
+	LHLD	DWORD2	;
+	MOV	M,A	;
+	INX	H	;
+	MOV	M,A	;((DWORD2)) <-- 0000H
+	LHLD	DWORD3	;
+	MOV	M,A	;
+	INX	H	;
+	MOV	M,A	;((DWORD3)) <-- 0000H
+	RET		;
+;
+;	READ AND WRITE DISK SECTOR
+;
+;	ALL CALLS TO THESE ROUTINES IN BIOS ARE ROUTED
+;	THROUGH THIS AREA. RETURN PARAMETER IS MONITORED
+;	FOR POSSIBLE ERROR CONDITION.
+;
+;	TRACK AND SECTOR INFORMATION MUST HAVE BEEN PASSED
+;	TO BIOS PRIOR TO INVOKING THESE CALLS.
+;
+RDSECT:	CALL	@READ	;BIOS CALL/READ DISK SECTOR
+	JMP	WRSEC1	;
+;
+WRSECT:	CALL	@WRITE	;BIOS CALL/WRITE DISK SECTOR
+WRSEC1:	ORA	A	;
+	RZ		;
+	LXI	H,ERR1	;
+	JMP	ERROR	;
+;
+;	SET TRACK AND SECTOR
+;
+;	THIS SUBROUTINE CONVERTS THE LOGICAL BLOCK NUMBER
+;	INFORMATION IN THE FILE CONTROL BLOCK AND SECTOR
+;	COUNTERS AND POINTERS TO THE ACTUAL PHYSICAL
+;	TRACK AND SECTOR INFORMATION TO BE PASSED TO
+;	BIOS PRIOR TO A SECTOR READ OR WRITE.
+;
+TRKSEC:	LHLD	BLCTR1	;
+	MVI	C,02H	;
+	CALL	SHRHLC	;SHIFT (HL) RIGHT PER COUNT IN (C)
+	SHLD	SCNTR1	;SECTOR COUNTER #1
+	SHLD	BLCTR2	;BLOCK COUNTER #2
+;
+;	SECONDARY ENTRY POINT
+;
+TRSEC1:	LXI	H,SCNTR1	;SECTOR COUNTER #1
+	MOV	C,M	;
+	INX	H	;
+	MOV	B,M	;(BC) <-- (SCNTR1)
+	LHLD	DWORD3	;
+	MOV	E,M	;
+	INX	H	;
+	MOV	D,M	;(DE) <-- ((DWORD3))
+	LHLD	DWORD2	;
+	MOV	A,M	;
+	INX	H	;
+	MOV	H,M	;
+	MOV	L,A	;(HL) <-- ((DWORD2))
+;
+;	SUBTRACT THE NUMBER OF SECTORS/TRACK FROM SECTOR
+;	NUMBER UNTIL (BC) >= (DE)
+;	COUNT IN (HL) DECREMENTED
+;
+TRSEC2:	MOV	A,C	;
+	SUB	E	;
+	MOV	A,B	;
+	SBB	D	;SET FLAG ON (BC) - (DE)
+	JNC	TRSEC3	;(BC)>=(DE)
+	PUSH	H	;SAVE COUNT
+	LHLD	SECTRS	;(HL) <-- SECTORS PER TRACK
+	MOV	A,E	;
+	SUB	L	;
+	MOV	E,A	;
+	MOV	A,D	;
+	SBB	H	;
+	MOV	D,A	;(DE) <-- (DE) - (SECTRS)
+	POP	H	;GET BACK THE COUNT
+	DCX	H	;  AND DECREMENT IT
+	JMP	TRSEC2	;     LOOP
+;
+;	ADD NUMBER OF SECTORS/TRACK TO (DE) UNTIL (HL) > (BC)
+;	OR (DE) + (SECTRS) OVERFLOWS.
+;	COUNT IN (HL) INCREMENTED
+;
+TRSEC3:	PUSH	H	;
+	LHLD	SECTRS	;SECTORS PER TRACK
+	DAD	D	;
+	JC	TRSEC4	;
+	MOV	A,C	;
+	SUB	L	;
+	MOV	A,B	;
+	SBB	H	;(BC) - (HL)
+	JC	TRSEC4	;
+	XCHG		;
+	POP	H	;
+	INX	H	;BUMP COUNTER
+	JMP	TRSEC3	;  LOOP
+;
+TRSEC4:	POP	H	;
+	PUSH	B	;
+	PUSH	D	;
+	PUSH	H	;
+	XCHG		;
+	LHLD	DIRTRK	;DIRECTORY TRACK NUMBER
+	DAD	D	;
+	MOV	B,H	;
+	MOV	C,L	;(BC) <-- PHYSICAL TRACK NUMBER
+	CALL	@SETTRK	;BIOS CALL/SET DISK TRACK
+	POP	D	;
+	LHLD	DWORD2	;
+	MOV	M,E	;
+	INX	H	;
+	MOV	M,D	;((DWORD2)) <-- (DE)
+	POP	D	;
+	LHLD	DWORD3	;
+	MOV	M,E	;
+	INX	H	;
+	MOV	M,D	;((DWORD3)) <-- (DE)
+	POP	B	;
+	MOV	A,C	;
+	SUB	E	;
+	MOV	C,A	;
+	MOV	A,B	;
+	SBB	D	;
+	MOV	B,A	;(BC) <-- LOGICAL SECTOR NUMBER
+	LHLD	SECTBL	;
+	XCHG		;(DE) <-- SECTOR TRANSLATE TABLE ADDR
+	CALL	@SECTRN	;BIOS CALL/SECTOR TRANSLATE
+	MOV	C,L	;
+	MOV	B,H	;(BC) <-- PHYSICAL SECTOR NUMBER
+	JMP	@SETSEC	;BIOS CALL/SET DISK SECTOR
+;
+;	POINT TO FILE CONTROL BLOCK NUMBER
+;
+;	RETURN WITH ABSOLUTE DIRECTORY BLOCK NUMBER IN (A)
+;	FILE EXTENT 00= 00H THROUGH 0FH
+;	FILE EXTENT 01= 10H THROUGH 1FH, ETC. TO
+;	FILE EXTENT 15= F0H THROUGH FFH.
+;
+BLPNTR:	LXI	H,BLSHFT	;(C) <-- BLOCK SHIFT FACTOR
+	MOV	C,M	;
+	LDA	CURREC	;CURRENT RECORD:: FCB + 32
+;
+;	DIVIDE (CURREC) BY 2^(BLSFT)...(USUALLY 8)
+;
+BLPNT1:	ORA	A	;CLEAR CARRY FLAG
+	RAR		;
+	DCR	C	;
+	JNZ	BLPNT1	;
+;
+	MOV	B,A	;
+	MVI	A,08H	;
+	SUB	M	;SUBTRACT BLOCK SHIFT FACTOR FROM 8
+	MOV	C,A	;AND SET AS COUNTER IN (C)
+	LDA	EXTCTR	;GET THE FILE EXTENT COUNTER: FCB + 12
+BLPNT2:	DCR	C	;  AND MULTIPLY IT BY 2^(C)
+	JZ	BLPNT3	;   (THIS IS 32 FOR 8" SD)
+	ORA	A	;
+	RAL		;
+	JMP	BLPNT2	;
+;
+BLPNT3:	ADD	B	;COMBINE W/ LOCAL POINTER
+	RET		;
+;
+;	GET BLOCK NUMBER
+;
+;	ON ENTRY (BC) CONTAINS BLOCK NUMBER OFFSET
+;	ON RETURN (HL) CONTAINS LOGICAL BLOCK NUMBER
+;
+;	CHECK IS MADE TO SEE IF SINGLE OR DOUBLE
+;	PRECISION LOGICAL BLOCK NUMBER IS CALLED FOR
+;
+GETBLN:	LHLD	ENTPAR	;POINT TO START OF FILE CONTROL BLOCK
+	LXI	D,16	;
+	DAD	D	;MOVE POINTER TO FIRST BLOCK NUMBER
+	DAD	B	;  THEN TO THE DESIRED BLOCK NUMBER
+	LDA	BIGDSK	;8" SD: 0FFH, LARGE CAP DISK: 00H
+	ORA	A	;
+	JZ	GETBL1	;BIG DISK, SO HIT IT AGAIN
+;
+	MOV	L,M	;CHEAPSKATE W/ SINGLE DENSITY
+	MVI	H,00H	;SINGLE PREC. BLOCK NUMBER
+	RET		;
+;
+GETBL1:	DAD	B	;DOUBLE PREC. BLOCK NUMBER
+	MOV	E,M	; BRING BACK BOTH BYTES IN (HL)
+	INX	H	;
+	MOV	D,M	;
+	XCHG		;
+	RET		;
+;
+;	SET SECTOR COUNTER #1
+;
+;	PUT THE LOGICAL BLOCK NUMBER OF THE CURRENT
+;	1K BLOCK INTO SECTOR COUNTER #1
+;
+SETSC1:	CALL	BLPNTR	;
+	MOV	C,A	;
+	MVI	B,00H	;
+	CALL	GETBLN	;GET BLOCK NUMBER IN (HL)
+	SHLD	SCNTR1	;SECTOR COUNTER #1
+	RET		;
+;
+;	CHECK TO SEE IF (SECTOR COUNTER #1)= 0000H
+;
+CHKSC1:	LHLD	SCNTR1	;SECTOR COUNTER #1
+	MOV	A,L	;
+	ORA	H	;
+	RET		;
+;
+;	COMPUTE LOGICAL SECTOR NUMBER
+;
+;	ON ENTRY:-(SECTOR COUNTER #1) CONTAINS BLOCK
+;		NUMBER OF CURRENT BLOCK AND (FILE RECORD
+;		COUNTER) THE SECTOR NUMBER WITHIN THE
+;		CURRENT FILE EXTENT.
+;	ON EXIT:-(SECTOR COUNTER #1) CONTAINS TO ABSOLUTE
+;		SECTOR NUMBER OF THE CURRENT SECTOR OF THE
+;		CURRENT DISK
+;		-(SECTOR COUNTER #2) CONTAINS THE ABSOLUTE
+;		SECTOR NUMBER OF THE START OF THE CURRENT
+;		LOGICAL BLOCK
+;		-(RECORD COUNTER) IS UNCHANGED
+;
+COMSEC:	LDA	BLSHFT	;GET BLOCK SHIFT FACTOR
+	LHLD	SCNTR1	;SECTOR COUNTER #1
+CONSE1:	DAD	H	;MULTIPLY BY 2^(BLSHFT)...USUALLY 8
+	DCR	A	;
+	JNZ	CONSE1	;
+;
+	SHLD	SCNTR2	;STORE RESULT IN SECTOR COUNTER #2
+	LDA	BLMASK	;(C) <-- DISK BLOCK MASK
+	MOV	C,A	;
+	LDA	CURREC	;CURRENT RECORD:: FCB + 32
+	ANA	C	;GET SECTOR NUMBER WITHIN BLOCK
+	ORA	L	;ADD TO BLOCK STARTING SECTOR NUMBER
+	MOV	L,A	;
+	SHLD	SCNTR1	;STORE IN SECTOR COUNTER #1
+	RET		;
+;
+;	POINT TO FILE CONTROL BLOCK BYTE 12
+;
+;	BYTE 12 IS THE FILE EXTENT BYTE
+;
+;	ENTRY PARAMETERS:	NONE
+;	RETURN PARAMETER:	ADDRESS OF FCB +12 IN (HL)
+;
+FCB12:	LHLD	ENTPAR	;LOAD THE POINTER TO START OF FCB
+	LXI	D,12	; AND ADD 12 TO IT.
+	DAD	D	;
+	RET		;
+;
+;	SET POINTERS TO FCB+15 AND FCB+32
+;
+;	ENTRY PARAMETERS:	NONE
+;	EXIT PARAMETERS:	POINTER TO FCB+15 IN (DE)
+;				POINTER TO FCB+32 IN (HL)
+;
+;	FCB +15 IS THE RECORD COUNT OF THE CURRENT FILE EXTENT
+;	FCB +32 IS THE CURRENT RECORD TO BE READ/WRITTEN IN
+;		SEQUENTIAL R/W OPERATIONS
+;
+FC1532:	LHLD	ENTPAR	;GET THE POINTER TO START OF FCB
+	LXI	D,15	;
+	DAD	D	;ADD 15 TO POINT TO RECORD COUNT
+	XCHG		;MOVE IT TO (DE)
+	LXI	H,17	;ADD ANOTHER 17 TO MAKE
+	DAD	D	;(HL) POINT TO FCB + 32
+	RET		;
+;
+;	UPDATE THE CURRENT DISK INFORMATION
+;	BY MOVING THE CONTENTS OF FCB+15 AND FCB+32
+;	INTO (RECCTR) AND (CURREC) RESPECTIVELY
+;
+UPDATE:	CALL	FC1532	;(DE) <-- FCB+15, (HL) <-- FCB+32
+	MOV	A,M	;GET CURRENT VALUE OF FCB+32
+	STA	CURREC	;AND STORE IN CURRENT RECORD NUMBER
+	XCHG		;SWAP POINTERS
+	MOV	A,M	;GET CURRENT VALUE OF FCB+15
+	STA	RECCTR	;AND STORE IN FILE RECORD COUNTER
+	CALL	FCB12	; (HL) <-- FCB + 12 , EXT BYTE PTR
+	LDA	NLMASK	;NULL BLOCK  MASK
+	ANA	M	;
+	STA	EXTCTR	;FILE EXTENT COUNTER: FCB + 12
+	RET		;
+;
+;	LOAD AND INCREMENT THE VALUE OF THE CURRENT RECORD
+;	NUMBER BY 2 IF THE SEQUENTIAL/RANDOM READ/WRITE 
+;	FLAG=2, OR LEAVE UNCHANGED IF=0. MOVE THE VALUE TO
+;	(RECCTR) AND (CURREC)
+;
+RWEXIT:	CALL	FC1532	;(DE) <-- FCB+15, (HL) <-- FCB+32
+	LDA	SERNFL	;SEQUENTIAL/RANDOM I/O FLAG
+	CPI	02H	;
+	JNZ	RWEXT1	;
+	XRA	A	;
+RWEXT1:	MOV	C,A	;
+	LDA	CURREC	;CURRENT RECORD:: FCB + 32
+	ADD	C	;
+	MOV	M,A	;
+	XCHG		;
+	LDA	RECCTR	;FILE RECORD COUNTER:: FCB + 15
+	MOV	M,A	;
+	RET		;
+;
+;	SHIFT THE CONTENTS OF (HL) RIGHT
+;	PER THE COUNT IN (C)
+;
+;	ENTRY PARAMETERS:	......... IN (HL)
+;				COUNT IN (C)
+;	EXIT PARAMETER:		SHIFTED VALUE OF (HL) IN (HL)
+;
+SHRHLC:	INR	C	;
+SHRHL1:	DCR	C	;CHECK THE COUNT
+	RZ		;EXIT ON ZERO
+	MOV	A,H	;
+	ORA	A	;CLEAR CARRY BIT
+	RAR		;SHIFT (H) TO THE RIGHT
+	MOV	H,A	;
+	MOV	A,L	;
+	RAR		;SHIFT (L) TO THE RIGHT
+	MOV	L,A	;
+	JMP	SHRHL1	;LOOP
+;
+;	CALCULATE CHECKSUM OF 128 BYTE DIRECTORY SECTOR
+;	AT ((DIRBPT))
+;
+;	ENTRY PARAMETER:	POINTER TO START OF DIRECTORY
+;				SECTOR IN (DIRBPT)
+;	EXIT PARAMETER:		VALUE OF CHECKSUM IN (A)
+;
+CHKSUM:	MVI	C,SECLEN	;COUNT= 128 BYTE SECTOR LENGTH
+	LHLD	DIRBPT	;GET DIRECTORY BUFFER POINTER
+	XRA	A	;CLEAR CHECKSUM REGISTER
+CHKSM1:	ADD	M	;ADD TO TOTAL IN (A)
+	INX	H	;STEP THE POINTER
+	DCR	C	;DECREMENT THE COUNT
+	JNZ	CHKSM1	;LOOP UNTIL COUNT=0
+	RET		;RETURN WITH CRC IN (A)
+;
+;	SHIFT (HL) LEFT PER COUNT IN (C)
+;
+;	ENTRY PARAMETERS:	...... IN (HL)
+;				COUNT IN (C)
+;	EXIT PARAMETER:		SHIFTED VALUE OF (HL) IN (HL)
+;
+SHLHLC:	INR	C	;
+SHLHL1:	DCR	C	;
+	RZ		;
+	DAD	H	;
+	JMP	SHLHL1	;
+;
+;	SET CURRENT DISK'S READ ONLY STATUS OR LOGGED IN STATUS
+;
+;	ENTRY PARAMETER:	(LOGVEC) or (ROWORD) IN (BC)
+;				CURRENT DISK NUMBER = (CURDSK)
+;	EXIT PARAMETER:		UPDATED VERSION OF (BC) IN (HL).
+;
+;	NOTE:
+;		(LOGVEC) AND (ROWORD) ARE 16 BIT WORDS
+;		EACH BIT REPRESENTS THE LOG IN AND READ ONLY
+;		STATUS OF THE DRIVE REPRESENTED BY THE BIT.
+;		LSB CORRESPONDS TO DRIVE 'A'.
+;		MSB CORRESPONDS TO DRIVE 'P'.
+;
+SETVEC:	PUSH	B	;SAVE ENTRY PARAMETER
+	LDA	CURDSK	;
+	MOV	C,A	;PUT DISK NUMBER AS COUNTER IN (C)
+	LXI	H,0001	;SET-BIT IN (HL)
+	CALL	SHLHLC	;SHIFT (HL) LEFT PER COUNT IN (C)
+	POP	B	;RESTORE PARAMETER
+	MOV	A,C	;COMBINE SHIFTED SET-BIT WITH
+	ORA	L	;  PREVIOUS CONTENTS OF
+	MOV	L,A	;   (BC) INTO (HL)
+	MOV	A,B	;
+	ORA	H	;
+	MOV	H,A	;
+	RET		;RETURN W/ UPDATED VALUE IN (HL)
+;
+;	GET CURRENT READ ONLY STATUS OF DISK
+;
+;	ENTRY PARAMETERS:	NONE
+;	EXIT PARAMETER:		LSB OF (A) SET IF DISK IS
+;				WRITE PROTECTED.
+;
+GETRO:	LHLD	ROWORD	;GET R/O STATUS WORD
+	LDA	CURDSK	;GET DISK NUMBER AS COUNTER IN (C)
+	MOV	C,A	;
+	CALL	SHRHLC	;SHIFT (HL) RIGHT PER COUNT IN (C)
+	MOV	A,L	;MOVE CURRENT DISK STATUS TO (A)
+	ANI	01H	;MASK OFF EXTRANEOUS INFORMATION
+	RET		;
+;
+;	BDOS COMMAND #28....SET CURRENT DISK TO READ ONLY
+;
+;	CONTENTS OF (ROWORD) UPDATED TO INCLUDE
+;	CURRENT DISK.
+;
+COM28:	LXI	H,ROWORD	;MOVE (ROWORD) TO (BC)
+	MOV	C,M	;
+	INX	H	;
+	MOV	B,M	;
+	CALL	SETVEC	;SET CURRENT DISK TO READ ONLY
+	SHLD	ROWORD	;STORE UPDATED INFO IN (ROWORD)
+	LHLD	DIRMAX	;MAX NUMBER OF ENTRIES IN DIRECTORY
+	INX	H	;
+	XCHG		;
+	LHLD	DWORD1	;
+	MOV	M,E	;
+	INX	H	;
+	MOV	M,D	;((DWORD1)) <-- (DIRMAX) + 1
+	RET		;
+;
+;	CHECK THE READ ONLY STATUS OF A FILE DIRECTORY
+;	ENTRY POINTED TO BY (DIRBPT) + (DIROFF)
+;
+;	R/O STATUS IS MARKED BY MSB OF FIRST BYTE OF
+;	FILE TYPE BEING SET. (FCB + 9)
+;
+;	IF THE FILE IS WRITE PROTECTED, AN ERROR MESSAGE
+;	WILL BE SENT TO THE CONSOLE AND THE CHOICE OF
+;	REBOOTING OR LIVING WITH THE R/O FILE GIVEN
+;
+CHKRO:	CALL	DIRPTR	;(HL) <-- (DIRBPT) + (DIROFF)
+CHKRO1:	LXI	D,09	;
+	DAD	D	;POINT TO FIRST BYTE OF FILETYPE
+	MOV	A,M	;MOVE INTO (A)
+	RAL		;SHIFT MSB INTO CARRY
+	RNC		;OK- FILE NOT WRITE PROTECTED
+	LXI	H,ERR4	;ERROR CONDITION.......
+	JMP	ERROR	;.....WRITE PROTECTED FILE
+;
+;	INTEROGATE READ ONLY STATUS OF CURRENT DISK
+;
+;	SAME GENRAL RULES AS PREVIOUS SUBROUTINE,
+;	EXEPT THAT IS FOR R/O DISK
+;
+INTRRO:	CALL	GETRO	;GET READ ONLY STATUS OF CURRENT DISK
+	RZ		;OK- THE DISK IS NOT WRITE PROTECTED
+	LXI	H,ERR3	;ERROR CONDITION..........
+	JMP	ERROR	;..........WRITE PROTECTED DISK
+;
+;	SET DIRECTORY POINTER TO START OF CURRENT
+;	DIRECTORY  ENTRY.
+;
+DIRPTR:	LHLD	DIRBPT	;GET THE DIRECTORY BUFFER POINTER
+	LDA	DIROFF	;AND THE DIRECTORY OFFSET
+;
+ADA2HL:	ADD	L	; ADD CONTENTS OF (A) TO (HL)
+	MOV	L,A	;  AND RETURN WITH THE RESULT
+	RNC		;   IN (HL)
+	INR	H	;
+	RET		;
+;
+;	GET THE CONTENTS OF S2 BYTE
+;
+;	ENTRY PARAMETER:	START OF FCB IN (ENTPAR)
+;	EXIT PARAMETERS:	POINTER TO FCB+14 IN (HL)
+;				CONTENTS OF (FCB+14) IN (A)
+;
+FCB14:	LHLD	ENTPAR	;POINT TO START OF FCB
+	LXI	D,14	;
+	DAD	D	;POINT TO FCB+14
+	MOV	A,M	;GET THE VALUE OF FCB+14
+	RET		;
+;
+;	ZERO OUT THE VALUE OF FCB BYTE S2.(FCB + 14)
+;
+ZRFCTR:	CALL	FCB14	;(HL) <-- FCB + 14, (A) <-- (FCB + 14)
+	MVI	M,00H	;PUT A ZERO IN IT
+	RET		;
+;
+;	SET THE MSB OF FCB BYTE S2.(FCB + 14)
+;
+SET14:	CALL	FCB14	;(HL) <-- FCB + 14, (A) <-- (FCB + 14)
+	ORI	80H	;SET THE HIGH BIT
+	MOV	M,A	;MOV IT BACK INTO MEMORY
+	RET		;
+;
+;	COMPARE ((DWORD1)) TO (BLCTR1)
+;
+;	FLAGS SET ONLY, NUMERICAL RESULT NOT STORED
+;		ZFLAG SET IF THEY ARE EQUAL
+;		CFLAG SET IF ((DWORD1)) > (BLCTR1)
+;
+FLB1D1:	LHLD	BLCTR1	;BLOCK COUNTER #1
+	XCHG		;
+	LHLD	DWORD1	;
+	MOV	A,E	;(BLCTR1)-((DWORD1))
+	SUB	M	;
+	INX	H	;
+	MOV	A,D	;
+	SBB	M	;
+	RET		;
+;
+;	IF ((DWORD1)) > (BLCTR1) THEN RETURN UNCHANGED
+;		ELSE ((DWORD1)) <-- (BLCTR1) + 1
+;
+SWB1D1:	CALL	FLB1D1	;
+	RC		;
+	INX	D	;
+	MOV	M,D	;
+	DCX	H	;
+	MOV	M,E	;
+	RET		;
+;
+;	SUBTRACT (HL) FROM (DE)
+;		RESULT RETURNED IN (HL)
+;
+DEMIHL:	MOV	A,E	;(HL) <-- (DE) - (HL)
+	SUB	L	;
+	MOV	L,A	;
+	MOV	A,D	;
+	SBB	H	;
+	MOV	H,A	;
+	RET		;
+;
+;	CHECK THE DIRECTORY CHECKSUM STORED IN
+;	CURRENT DISK PARAMETER AREA WITH
+;	CHECKSUM COMPUTED FROM DIRECTORY OF
+;	DISK MOUNTED IN CURRENT DRIVE
+;
+;	IF CHECKSUMS DON'T MATCH, THE DISK IS
+;	SET TO READ ONLY STATUS
+;
+CHKCRC:	MVI	C,0FFH	;
+CHKCR1:	LHLD	BLCTR2	;BLOCK COUNTER #2
+	XCHG		;
+	LHLD	CHKSIZ	;NUMBER OF DIRECTORY ENTRIES TO BE CHECKED
+	CALL	DEMIHL	;(HL) <-- (DE) - (HL)
+	RNC		;
+	PUSH	B	;
+	CALL	CHKSUM	;CRC OF 128 BYTES POINTED TO BY (DIRBPT)
+	LHLD	DIRCRC	;DIRECTORY BUFFER POINTER
+	XCHG		;
+	LHLD	BLCTR2	;BLOCK COUNTER #2
+	DAD	D	;
+	POP	B	;
+	INR	C	;
+	JZ	CHKCR2	;
+	CMP	M	;
+	RZ		;
+	CALL	FLB1D1	;
+	RNC		;
+	CALL	COM28	;* WRITE PROTECT DISK
+	RET		;
+;
+CHKCR2:	MOV	M,A	;
+	RET		;
+;
+;	DIRECTORY SECTOR WRITE
+;
+;	DMA ADDRESS IS SET TO (DIRBPT)
+;	SECTOR IS WRITEN
+;	DMA ADDRESS IS SET BACK TO (CURDMA)
+;
+;	(A)= 01 IS PASSED TO BIOS TO INDICATE THAT THIS
+;	IS A DIRECTORY WRITE OPERATION
+;
+DIRWRT:	CALL	CHKCRC	;COMPARE CHECKSUMS BEFORE WRITING
+	CALL	DIRDMA	;SET DMA FOR DIRECTORY READ/WRITE
+	MVI	C,01H	;TELL BIOS THAT THIS IS A DIR WRITE
+	CALL	WRSECT	;
+	JMP	DIRD1	;
+;
+;	DIRECTORY SECTOR READ
+;
+;	DMA ADDRESS IS SET TO (DIRBPT)
+;	THE SECTOR IS READ, AND
+;	DMA ADDRESS IS SET BACK TO (CURDMA)
+;
+;	THIS PROCEDURE AVOIDS OVERWRITING DATA AREAS
+;	BY THE DIRECTORY OPERATIONS A OCCURED IN CP/M 1.4
+;	DURING 'SAVE' OPERATIONS
+;
+DIREAD:	CALL	DIRDMA	;SET DMA FOR DIRECTORY READ/WRITE
+	CALL	RDSECT	;
+DIRD1:	LXI	H,CURDMA	;
+	JMP	DIRDM1	;
+;
+;	SET DMA ADDRES FOR DIRECTORY READ/WRITE
+;
+DIRDMA:	LXI	H,DIRBPT	;GET DIRECTORY BUFFER POINTER
+DIRDM1:	MOV	C,M	;(BC) <-- ((HL))
+	INX	H	;
+	MOV	B,M	;
+	JMP	@SETDMA	;BIOS CALL/SET DMA
+;
+;	MOVE SECTOR FROM ((DIRBPT)) TO ((CURDMA))
+;
+;Z80 USERS MIGHT CHANGE THIS TO SOMETHING LIKE:
+;
+;MOVSEC:LD	HL,(CURDMA)
+;	EX	DE,HL
+;	LD	HL,(DIRBPT)
+;	LD	BC,SECLEN
+;	LDIR
+;	RET
+;
+MOVSEC:	LHLD	DIRBPT	;SOURCE
+	XCHG		;
+	LHLD	CURDMA	;DESTINATION
+	MVI	C,SECLEN	;COUNT
+	JMP	BLKMOV	;
+;
+;	CHECK THE CONTENTS OF BLOCK COUNTER #1
+;
+;	RETURNS WITH (A)= LOW ORDER BYTE OF (BLCTR1)+1
+;		IF THE LOW ORDER BYTE = THE HIGH ORDER BYTE
+;		ELSE RETURNS WITH LOW ORDER BYTE
+;		OF (BLCTR1) IN (A).
+;		ZFLAG ALWAYS RESET UNLESS (BLCTR1)= -1
+;	COME TO THINK ABOUT IT, THIS IS REALLY A CHECK OF
+;	WHETHER (BLCTR1)= -1. IN THAT CASE WHY THE HELL IS
+;	THIS THING NOT WRITTEN AS FOLLOWS:
+;
+;CHKBC1:LHLD	BLCTR1	;
+;	INX	H	;MAKE -1 INTO 00
+;	MOV	A,L	;
+;	ORA	H	;
+;	RET		;
+;
+;	THIS SUBROUTINE IS ALWAYS CALLED IMMEDIATELY AFTER
+;	CALLS TO SERCHF, SERCHN, MAKEF AND CLOSEF.
+;
+CHKBC1:	LXI	H,BLCTR1	;
+	MOV	A,M	;
+	INX	H	;
+	CMP	M	;
+	RNZ		;NOT EQUAL- RETURN W/ LOW ORDER BYTE
+	INR	A	;EQUAL-- BUMP LOW ORDER BYTE
+	RET		;
+;
+;	SET THE CONTENTS OF BLOCK COUNTER #1 TO -1
+;
+SETBC1:	LXI	H,-1	;
+	SHLD	BLCTR1	;BLOCK COUNTER #1
+	RET		;
+;
+;	COMPARE THE CONTENTS OF BLOCK COUNTER #1 AGAINST
+;	THE MAXIMUM DIRECTORY CAPACITY OF THE DISK.
+;
+;	SET (BLCTR1) <-- -1 IF DIRECTORY CAPACITY IS EXCEEDED
+;	ELSE READ DIRECTORY SECTOR AND CHECK DIRECTORY
+;	CHECKSUM.
+;
+GETDIR:	LHLD	DIRMAX	;MAX NUMBER OF ENTRIES IN DIRECTORY
+	XCHG		;
+	LHLD	BLCTR1	;BLOCK COUNTER #1
+	INX	H	;
+	SHLD	BLCTR1	;BLOCK COUNTER #1
+	CALL	DEMIHL	;(HL) <-- (DE) - (HL)
+	JC	SETBC1	; SET (BLCTR1) <-- -1
+			;   ERROR EXIT
+;
+GETDI1:	LDA	BLCTR1	;BLOCK COUNTER #1
+	ANI	03H	;
+	MVI	B,05H	;
+GETDI2:	ADD	A	;
+	DCR	B	;
+	JNZ	GETDI2	;
+	STA	DIROFF	;DIRECTORY OFFSET
+	ORA	A	;
+	RNZ		;
+	PUSH	B	;
+	CALL	TRKSEC	;SET TRACK AND SECTOR
+	CALL	DIREAD	;READ DIRECTORY SECTOR FROM DISK
+	POP	B	;
+	JMP	CHKCR1	;OK EXIT
+;
+;	GET STATUS OF ALLOCATION OF BLOCK IN (A)
+;
+;	ENTRY PARAMETER:(BC)	CONTAINS DISK BLOCK #
+;	EXIT PARAMETER:	(A)...	STATUS OF 1K BLOCK
+;			(D)...	BIT NUMBER
+;			(HL)..	POINTER TO BYTE IN ALLOCAION
+;				MAP
+;
+;	THIS SUBROUTINE IS CALLED:
+;					TWICE BY WRSUB
+;					ONCE  BY BLKMP5
+;	REPLACEMENT CODE:
+;GETALC:MOV	A,C	;
+;	ANI	07H	;
+;	INR	A	;
+;	MOV	E,A	;
+;	MOV	D,A	;BIT COUNTER TO (D) & (E)
+;	MOV	L,C	;
+;	MOV	H,B	;
+;	MVI	C,03H	;
+;	PUSH	D	;
+;	CALL	SHRHLC	;(HL) <-- ENTRY PARAMETER/8
+;	XCHG		;
+;	LHLD	DALLOC	;
+;	DAD	D	;POINT TO BYTE IN ALLOCATION BLOCK
+;	POP	D	;RESTORE COUNTERS
+;	MOV	A,M	;GET BIT MAP BYTE
+;GETAL1:RLC		;ROTATE UNTIL DESIRED BIT
+;	DCR	E	;  IS LSB OF (A)
+;	JNZ	GETAL1	;
+;	RET		;
+;
+GETALC:	MOV	A,C	;
+	ANI	07H	;
+	INR	A	;
+	MOV	E,A	;BIT NUMBER INTO (E) & (D)
+	MOV	D,A	;
+	MOV	A,C	;
+	RRC		;/2
+	RRC		;  /4
+	RRC		;    /8
+	ANI	1FH	;
+	MOV	C,A	;
+	MOV	A,B	;
+	ADD	A	;*2
+	ADD	A	;  *4
+	ADD	A	;    *8
+	ADD	A	;      *16
+	ADD	A	;        *32
+	ORA	C	;
+	MOV	C,A	;
+	MOV	A,B	;
+	RRC		;/2
+	RRC		;  /4
+	RRC		;    /8
+	ANI	1FH	;
+	MOV	B,A	;(BC) <-- (BC)/8= BYTE NUMBER
+			;	IN ALLOCATION BLOCK
+	LHLD	DALLOC	;
+	DAD	B	;(HL) <-- POINTER TO ALLOC BYTE
+	MOV	A,M	;ALLOCATION BYTE
+GETAL1:	RLC		;ROTATE BIT INTO LSB (A)
+	DCR	E	;
+	JNZ	GETAL1	;
+	RET		;
+;
+;	SET OR CLEAR 1K BLOCK FROM THE ALLOCATION MAP
+;
+;	ENTRY PARAMETER:	(BC)= DISK BLOCK NUMBER
+;				00 OR 01 IN (E)
+;		IF (E)= 00 THEN THE BLOCK IS CLEARED
+;		IF (E)= 01 THEN THE BLOCK IS MARKED "IN USE"
+;
+BLKMP5:	PUSH	D	;SAVE ENTRY PARAMETER
+	CALL	GETALC	;GET STATUS OF ALLOCATION BLOCK IN LSB OF (A)
+	ANI	0FEH	;MASK OFF LSB ::= CLEAR ALLOCATION
+	POP	B	;GET BACK ENTRY PARAMETER TO (BC)
+	ORA	C	;.OR. LSB WITH ENTRY PARAMETER
+BLKMP6:	RRC		;ROTATE (A) PER COUNT IN (D)
+	DCR	D	;
+	JNZ	BLKMP6	;
+;
+	MOV	M,A	;STORE BYTE BACK INTO ALLOCATION BLOCK
+	RET		;
+;
+;	SET OR CLEAR THE BIT CORRECPONDING TO THE
+;	1K DISK BLOCK NUMBER IN (HL).
+;
+;	ENTRY PARAMETER:	(HL)=DISK 1K BLOCK NUMBER
+;				(C)= 0 WHEN CALLED BY DELETE
+;				(C)= 1 WHEN CALLED BY LOGIN
+;	PASSES ENTRY PARAMETER TO BLKMP5 IN (E)
+;	IF PARAMETER IS 1, THEN THE 1K BLOCK IS MARKED AS
+;	AS BEING IN USE.
+;	IF PARAMETER IS 0, THEN THE 1K BLOCK IS CLEARED AND
+;	CAN BE REALLOCATED.
+;
+BLKMAP:	CALL	DIRPTR	;(HL) <-- (DIRBPT) + (DIROFF)
+	LXI	D,16	;
+	DAD	D	;POINT TO START OF BLOCK NUMBERS
+	PUSH	B	;SAVE ENTRY PARAMETER
+	MVI	C,11H	;COUNTER 16 BYTES + 1
+BLKMP1:	POP	D	;
+	DCR	C	;
+	RZ		;EXIT WHEN LAST BLOCK IS CHECKED
+	PUSH	D	;
+	LDA	BIGDSK	;8" SD: 0FFH, LARGE CAP DISK: 00H
+	ORA	A	;
+	JZ	BLKMP2	;
+;
+;	CODE FOR 8" SD
+;
+	PUSH	B	;
+	PUSH	H	;
+	MOV	C,M	;
+	MVI	B,00H	;
+	JMP	BLKMP3	;
+;
+;	CODE FOR LARGE DISK
+;
+BLKMP2:	DCR	C	;
+	PUSH	B	;
+	MOV	C,M	;
+	INX	H	;
+	MOV	B,M	;
+	PUSH	H	;
+;
+;	RESUME COMMON CODE
+;
+;	IF (BC) <> 0000H AND (HL) >= (BC)\
+;		THEN UPDATE ALLOCATION MAP
+;
+BLKMP3:	MOV	A,C	;
+	ORA	B	;
+	JZ	BLKMP4	;
+	LHLD	DSKSIZ	;DISK SIZE, # OF 1K BLOCKS -1
+	MOV	A,L	;
+	SUB	C	;
+	MOV	A,H	;
+	SBB	B	;(HL) - (BC)
+	CNC	BLKMP5	;UPDATE ALLOCATION MAP
+BLKMP4:	POP	H	;
+	INX	H	;POINT TO NEXT BLOCK
+	POP	B	;RESTORE INPUT PARAMETER
+	JMP	BLKMP1	;LOOP
+;
+;	PICK UP THE FLAG SET BY SEARCH OPERATIONS
+;	THEN VAMOOSE OUT OF BDOS
+;
+EXIT3:	LDA	SRCHFL	;POINTER SET BY SERCHF FOR USE BY SERCHN
+	JMP	EXIT1	;
+;
+;	SUBROUTINE CALLED BY SEARCH WHEN COMPARING
+;	BYTE 12. THIS HAS SOMETHING TO DO WITH THE
+;	EXTENT NUMBER BYTE, BUT EXACT USE NOT 
+;	DETERMINED YET. (NLMASK)* ::= .NOT.(NLMASK)
+;
+;	(A) <-- ((A).AND.(NLMASK)* - (C).AND.(NLMASK)*).AND.1FH
+;
+SERCH7:	PUSH	B	;
+	PUSH	PSW	;
+	LDA	NLMASK	;NULL BLOCK  MASK
+	CMA		;
+	MOV	B,A	;
+	MOV	A,C	;
+	ANA	B	;
+	MOV	C,A	;
+	POP	PSW	;
+	ANA	B	;
+	SUB	C	;
+	ANI	1FH	;
+	POP	B	;
+	RET		;
+;
+;	SEARCH FOR OCCURENCE OF FILE NAME IN DIRECTORY
+;
+;	SERCHF IS INITIAL ENTRY POINT WHICH LEAVES
+;	FCB VECTOR FOR USE BY SUBSEQUENT SEARCHES
+;	WHICH ENTER BY WAY OF SERCHN. NO OTHER BDOS
+;	CALLS WHICH MAKE USE OF SRCHFP BETWEEN THE
+;	INTIAL CALL TO SERCHF AND CALLS TO SERCHN ARE
+;	ARE ALLOWED OR ELSE RATHER STRANGE THINGS MAY HAPPEN.
+;	REMEMBER THAT BDOS IS NOT DESIGNED FOR RECURSIVE CALLS
+;	AND STORED VALUES ARE OVERWRITTEN INSTEAD OF BEING
+;	PUSHED UP ONTO A LOCAL STACK.
+;
+;	SERCHF INITIATES (SRCHFL) TO 0FFH.
+;	A SUCCESSFUL MATCH CLEARS IT TO 00
+;
+;	ENTRY PARAMETER:	(C)= NUMBER OF BYTES TO BE MATCHED
+;				THIS COUNT IS STORED IN (SRCHCT)
+;				FOR SUBSEQUENT CALLS TO SERCHN
+;
+SERCHF:	MVI	A,0FFH	;SEARCH FOR FIRST OCCURENCE OF FILE NAME
+	STA	SRCHFL	;POINTER SET BY SERCHF FOR USE BY SERCHN
+	LXI	H,SRCHCT ;SEARCH BYTE COUNTER
+	MOV	M,C	;
+	LHLD	ENTPAR	;ENTRY PARAMETER
+	SHLD	SRCHFP	;SEARCH FCB POINTER, SET BY SERCHF
+	CALL	SETBC1	;SET (BLCTR1) <-- -1
+	CALL	SETDIR	;
+;
+;	ENTRY POINT FOR SUBSEQUENT SEARCHES
+;
+SERCHN:	MVI	C,00H	;SEARCH FOR NEXT OCCURENCE OF FILE NAME
+	CALL	GETDIR	;GET DIRECTORY SECTOR
+	CALL	CHKBC1	;
+	JZ	SERCH6	;
+	LHLD	SRCHFP	;SEARCH FCB POINTER, SET BY SERCHF
+	XCHG		;
+	LDAX	D	;
+	CPI	0E5H	;IS THIS DIRECTORY BLOCK IN USE?
+	JZ	SERCH1	;NO-
+	PUSH	D	;
+	CALL	FLB1D1	;
+	POP	D	;
+	JNC	SERCH6	;
+SERCH1:	CALL	DIRPTR	;(HL) <-- (DIRBPT) + (DIROFF)
+	LDA	SRCHCT	;NUMBER OF BYTES TO BE COMPARED
+	MOV	C,A	;
+	MVI	B,00H	;COUNTER FOR BYTE BEING COMPARED
+SERCH2:	MOV	A,C	;
+	ORA	A	;CHECK THE COUNT
+	JZ	SERCH5	;END OF THE MATCH- EXIT TRIUMPHANTLY
+	LDAX	D	;
+	CPI	'?'	;WILDCARD MATCH
+	JZ	SERCH4	;
+	MOV	A,B	;
+PATCH:	ORA	A	;
+	JNZ	PATCH2	;
+	LDAX	D	;
+	CPI	0E5H	;
+	JZ	PATCH2	;
+	MOV	A,M	;
+	ORA	A	;
+	JZ	SERCH4	;
+PATCH2:	MOV	A,B	;
+	CPI	0DH	;ARE WE AT BYTE 13?
+	JZ	SERCH4	;SKIP- WE DON'T HAVE TO MATCH BYTE 13
+	CPI	0CH	;ARE WE AT BYTE 12?
+	LDAX	D	;
+	JZ	SERCH3	;
+	SUB	M	;COMPARE FCB BYTE TO DIR ENTRY BYTE W/
+			;MSB MASKED. THIS IS SO THAT SYSTEM
+			;AND R/O FILENAMES CAN BE MATCHED
+	ANI	7FH	;
+	JNZ	SERCHN	;NO MATCH- GET ANOTHER DIRECTORY ENTRY
+	JMP	SERCH4	;GOT A MATCH GOING, GO TO NEXT BYTE
+;
+;	WE COME HERE ON BYTE 12 (EXTENT BYTE)
+;
+SERCH3:	PUSH	B	;
+	MOV	C,M	;
+	CALL	SERCH7	;
+	POP	B	;
+	JNZ	SERCHN	;SEARCH FOR NEXT OCCURENCE OF FILE NAME
+;
+;	WE HAVE A MATCH GOING, BUMP THE COUNTERS & POINTERS
+;	FOR ANOTHER TURN AROUND THE LOOP
+;
+SERCH4:	INX	D	;INCREMENT POINTERS
+	INX	H	;
+	INR	B	;
+	DCR	C	;DECREMENT LOOP COUNT
+	JMP	SERCH2	;LOOP
+;
+;	FILE NAME FOUND EXIT
+;
+;	LEAVE WITH (RETPAR) SET TO THE DIRECTORY OFFSET
+;	NUMBER. I.E. 0, 1, 2 OR 3 THAT MARKS THE DIRECTORY
+;	ENTRY IN (DIRBPT) THAT MATCHED FCB.
+;	(SRCHFL) CLEARED IF WAS NOT ALREADY DONE SO IN A
+;	PREVIOUS PASS. 
+;
+SERCH5:	LDA	BLCTR1	;BLOCK COUNTER #1
+	ANI	03H	;
+	STA	RETPAR	;RETURN PARAMETER
+	XRA	A	; CLEAR IT NOW
+	STA	SRCHFL	;
+	RET		;
+;
+;	FILE NAME NOT FOUND EXIT
+;
+;	SET (BLKCTR)= 0FFFFH AND (RETVAL)= 0FFH
+;	TO TELL THE WORLD THAT NO MATCH WAS FOUND
+;
+SERCH6:	CALL	SETBC1	;SET (BLCTR1) <-- -1
+	MVI	A,0FFH	;
+	JMP	EXIT1	;(RETVAL) <-- (A) AND RETURN
+;
+;	DELETE FILE FROM DIRECTORY
+;
+;	THE FIRST 12 CHARACTERS OF THE FILENAME.TYP ARE
+;	COMPARED TO THE DIRECTORY ENTRIES, AND IF A MATCH
+;	IS FOUND, THE FIRST BYTE OF THE DIRECTORY ENTRY
+;	IS CHANEG TO 0E5H. THE DATA IS ON THE DISK AND
+;	CAN BE RECOVERED BY SUCH UTILITIES AS UNERASE OR
+;	SPAT.
+;
+DELETE:	CALL	INTRRO	;INTEROGATE CURRENT R/O STATUS
+	MVI	C,0CH	;12 CHARACTER MATCH
+	CALL	SERCHF	;SEARCH FOR FIRST OCCURENCE OF FILE NAME
+DELET1:	CALL	CHKBC1	;CHECK CONTENTS OF (BLCTR1)
+	RZ		;EXIT WHEN THERE IS NO FURTHER MATCH
+	CALL	CHKRO	;CHECK CURRENT R/O STATUS
+	CALL	DIRPTR	;(HL) <-- (DIRBPT) + (DIROFF)
+	MVI	M,0E5H	;INSERT ERASE CHAR IN DIR FCB
+	MVI	C,00H	;
+	CALL	BLKMAP	;
+	CALL	DIRWRT	;WRITE DIRECTORY SECTOR TO DISK
+	CALL	SERCHN	;FIND NEXT OCCURENCE OF FILE NAME
+	JMP	DELET1	;LOOP BACK FOR ANOTHER TRY
+;
+;	SUBROUTINE CALLED BY WRSEQ
+;
+;	SEARCHES FOR FIRST UNUSED 1K BLOCK IN THE ALLOCATION
+;	ALLOCATION MAP
+;
+;	ENTRY PARAMETERS:(BC)	CURRENT BLOCK NUMBER OR 0000H
+;				(SEE NOTE BELOW)
+;	EXIT PARAMETERS: (HL)	NUMBER OF NEXT FREE BLOCK OR
+;				0000H IF NO BLOCK AVAILABLE
+;
+;	NOTE:
+;		SEARCH STARTS AT BLOCK 0000H FOR FIRST ALLOC-
+;		ATION FOR A NEW DIRECTORY EXTENT, OR FROM THE
+;		CURRENT BLOCK NUMBER FOR SUBSEQUENT ALLOCATIONS
+;		THIS SAVES TIME SINCE IT ASSUMES THAT ALL
+;		BLOCKS UP TO THE CURRENT ONE HAVE BEEN USED.
+;		THIS MAY CAUSE AN 'OUT OF DISK SPACE' ERROR
+;		IF OTHER FILES ARE BEING DELETED WHILE THIS
+;		ONE IS BEING WRITTEN. A REMOTE, BUT REAL,
+;		POSSIBILITY.
+;
+WRSUB:	MOV	D,B	;
+	MOV	E,C	;(DE) <-- (BC)
+WRSUB1:	MOV	A,C	;
+	ORA	B	;
+	JZ	WRSUB2	;
+	DCX	B	;
+	PUSH	D	;
+	PUSH	B	;
+	CALL	GETALC	;GET STATUS OF ALLOCATION BLOCK IN LSB OF (A)
+	RAR		;
+	JNC	WRSUB3	;FOUND AN EMPTY ONE
+	POP	B	;
+	POP	D	;
+WRSUB2:	LHLD	DSKSIZ	;DISK SIZE, # OF 1K BLOCKS -1
+	MOV	A,E	;
+	SUB	L	;
+	MOV	A,D	;
+	SBB	H	;
+	JNC	WRSUB4	;
+	INX	D	;
+	PUSH	B	;
+	PUSH	D	;
+	MOV	B,D	;
+	MOV	C,E	;
+	CALL	GETALC	;GET STATUS OF ALLOCATION BLOCK IN LSB OF (A)
+	RAR		;
+	JNC	WRSUB3	;
+	POP	D	;
+	POP	B	;
+	JMP	WRSUB1	;
+;
+;	BLOCK FOUND
+;
+WRSUB3:	RAL		;ROTATE BACK INTO PLACE
+	INR	A	;MARK IT 'IN USE'
+	CALL	BLKMP6	;PUT BACK INTO BLOCK MAP
+	POP	H	;(HL) <-- BLOCK NUMBER
+	POP	D	;WASTE STACK
+	RET		;
+;
+;	NO EMPTY BLOCKS
+;
+WRSUB4:	MOV	A,C	;
+	ORA	B	;
+	JNZ	WRSUB1	;
+	LXI	H,0000H	;
+	RET		;
+;
+;	SUBROUTINE CALLED BY MAKEF
+;
+;	MOVES 32 BYTES FROM FILE CONTROL BLOCK TO
+;	DIRECTORY ENTRY THEN WRITES DIRECTORY SECTOR
+;	TO DISK.
+;
+;	ALSO CALLED THROUGH SECONDARY ENTRY POINT:
+;
+;	(C)= 16, (E)= 12	WHEN CALLED BY RENAME	
+;	(C)= 00, (E)= 12	WHEN CALLED BY ATTRIB
+;
+MAKESR:	MVI	C,00H	;
+	MVI	E,32	;DIRECTORY ENTRY IS 32 BYTES
+;
+;	SECONDARY ENTRY POINT
+;	(C)= OFFSET, (E)= BYTE COUNTER
+;
+MAKES1:	PUSH	D	;SAVE COUNTER
+	MVI	B,00H	;
+	LHLD	ENTPAR	;ENTRY PARAMETER
+	DAD	B	;  ADD OFFSET
+	XCHG		;     MOVE TO (DE)
+	CALL	DIRPTR	;(HL) <-- (DIRBPT) + (DIROFF)
+	POP	B	;
+	CALL	BLKMOV	;MOVE FILENAME.EXT INTO DIR BUFFER
+MAKES2:	CALL	TRKSEC	;SET TRACK AND SECTOR
+	JMP	DIRWRT	;WRITE DIRECTORY BUFFER TO DISK
+;
+;	RENAME FILE
+;
+;	ON ENTRY THE CONTENTS OF (DE) POINTS TO A 32
+;	BYTE BLOCK WHERE THE FIRST 16 BYTES ARE THE
+;	OLD FILENAME.TYP AND THE SECOND 16 ARE THE
+;	NEW FILENAME.EXT. THIS PIECE OF CODE MAKES A
+;	12 BYTE SEARCH TO MATCH THE OLD FILENAME.TYP
+;	WITH ENTRIES IN THE DIRECTORY. WHEN A MATCH
+;	IS MADE THE NEW FILENAME.TYP IS INSERTED INTO
+;	THE DIRECTORY SECTOR AND THE SECTOR WRITTTEN
+;	BACK ONTO THE DISK.
+;
+RENAME:	CALL	INTRRO	;INTEROGATE CURRENT R/O STATUS
+	MVI	C,0CH	;SET UP FOR 12 BYTE SEARCH
+	CALL	SERCHF	;SEARCH FOR FIRST OCCURENCE OF FILE NAME
+	LHLD	ENTPAR	;ENTRY PARAMETER
+	MOV	A,M	;
+	LXI	D,16	;
+	DAD	D	;POINT TO NEW FILENAME.TYP
+	MOV	M,A	;
+RENAM1:	CALL	CHKBC1	;CHECK CONTENTS OF (BLCTR1)
+	RZ		;EXIT- NO MATCH
+	CALL	CHKRO	;CHECK CURRENT R/O STATUS
+	MVI	C,10H	;16 BYTE OFFSET
+	MVI	E,0CH	;12 BYTE MOVE
+	CALL	MAKES1	;MOVE FILENAME.TYP & WRITE DIR TO DISK
+	CALL	SERCHN	;SEARCH FOR NEXT OCCURENCE OF FILE NAME
+	JMP	RENAM1	;LOOP BACK FOR ANOTHER GO AT IT
+;
+;	SET FILE ATTRIBUTES
+;
+;	THIS PIECE OF CODE IS USED OFFICIALLY TO MAKE
+;	SYSTEM FILES INVISIBLE TO  DIRECTORY OPERATIONS
+;	BY SETTING MSB OF T1 HIGH AND TO MAKE FILES "READ
+;	ONLY" BY SETTING MSB OF T2 HIGH. COULD BE USED FOR
+;	OTHER MISCHIEF.
+;
+ATTRIB:	MVI	C,0CH	;12 BYTE SEARCH
+	CALL	SERCHF	;SEARCH FOR FIRST OCCURENCE OF FILE NAME
+ATTRB1:	CALL	CHKBC1	;CHECK CONTENTS OF (BLCTR1)
+	RZ		;RETURN WHEN FILENAME.EXT CANNOT BE
+			;FOUND, EITHER ON THE FIRST PASS OR
+			;SUBSEQUENT PASSES
+	MVI	C,00H	;
+	MVI	E,0CH	;MOVE 12 BYTES INTO DIRECTORY BUFFER
+	CALL	MAKES1	;REPLACING CURRENT NAME & REWRITING DIR
+	CALL	SERCHN	;SEARCH FOR NEXT OCCURENCE OF FILE NAME
+	JMP	ATTRB1	;LOOP
+;
+;	OPEN A FILE FOR READING OR WRITING
+;
+OPENF:	MVI	C,0FH	;15 BYTES SEARCH
+	CALL	SERCHF	;SEARCH FOR FIRST OCCURENCE OF FILE NAME
+	CALL	CHKBC1	;CHECK CONTENTS OF (BLCTR1)
+	RZ		;--ERROR EXIT FILE NOT FOUND
+OPENF1:	CALL	FCB12	; (HL) <-- FCB + 12 , EXT BYTE PTR
+	MOV	A,M	;
+	PUSH	PSW	;
+	PUSH	H	;
+	CALL	DIRPTR	;(HL) <-- (DIRBPT) + (DIROFF)
+	XCHG		;
+	LHLD	ENTPAR	;ENTRY PARAMETER
+	MVI	C,32	;SIZE OF DIRECTORY BLOCK
+	PUSH	D	;
+	CALL	BLKMOV	;MOVE DIRECTORY BLOCK INTO FCB
+	CALL	SET14	;SET MSB OF BYTE 14 TO SAY FILE OPEN
+	POP	D	;
+	LXI	H,12	;
+	DAD	D	;
+	MOV	C,M	;(C) <-- (DIRECTORY ENTRYI+12)= EXTENT
+	LXI	H,15	;
+	DAD	D	;
+	MOV	B,M	;(B) <-- (DIRECTORY ENTRY+15)= RECORD CTR
+	POP	H	;
+	POP	PSW	;(A) <-- (FCB + 12)
+	MOV	M,A	;
+	MOV	A,C	;
+;
+;	IF (FCB+12)=(DIR ENTRY+12) THEN (FCB+15) <-- (DIR ENTRY+15)
+;	IF (FCB+12)>(DIR ENTRY+12) THEN (FCB+15) <-- 80H
+;	IF (FCB+12)<(DIR ENTRY+12) THEN (FCB+15) <-- 00H
+;
+	CMP	M	;
+	MOV	A,B	;
+	JZ	OPENF2	;
+	MVI	A,00H	;
+	JC	OPENF2	;
+	MVI	A,80H	;
+OPENF2:	LHLD	ENTPAR	;ENTRY PARAMETER
+	LXI	D,15	;
+	DAD	D	;
+	MOV	M,A	;
+	RET		;
+;
+;	SUBROUTINE CALLED WHILE CLOSING A BIG DISK
+;
+;	IF ((HL)) = 0 THEN ((HL)) <-- ((DE))
+;
+CLOSE8:	MOV	A,M	;IS ((HL)) = 0?
+	INX	H	;
+	ORA	M	;
+	DCX	H	;
+	RNZ		;NO- RETURN AS IS
+	LDAX	D	;((HL)) IS 0, REPLACE WITH ((DE))
+	MOV	M,A	;
+	INX	D	;
+	INX	H	;
+	LDAX	D	;
+	MOV	M,A	;
+	DCX	D	;
+	DCX	H	;
+	RET		;
+;
+;	CLOSE DISK FILE AFTER READING OR WRITING
+;
+CLOSEF:	XRA	A	;CLOSE FILE
+	STA	RETPAR	;RETURN PARAMETER
+	STA	BLCTR1	;BLOCK COUNTER #1
+	STA	BLCTR1+1	;BLOCK COUNTER #1
+	CALL	GETRO	;GET READ ONLY STATUS OF CURRENT DISK
+	RNZ		;
+	CALL	FCB14	;(HL) <-- FCB + 14, (A) <-- (FCB + 14)
+	ANI	80H	;CHECK MSB OF (FCB+14)
+	RNZ		;RETURN IF MSB SET
+;
+	MVI	C,0FH	;15 BYTE SEARCH
+	CALL	SERCHF	;SEARCH FOR FIRST OCCURENCE OF FILE NAME
+	CALL	CHKBC1	;CHECK CONTENTS OF (BLCTR1)
+	RZ		;
+	LXI	B,16	;
+	CALL	DIRPTR	;(HL) <-- (DIRBPT) + (DIROFF)
+	DAD	B	;
+	XCHG		;
+	LHLD	ENTPAR	;ENTRY PARAMETER
+	DAD	B	;
+;
+;	(DE) <-- FCB + 16
+;	(HL) <-- (DIRBPT) + (DIROFF) + 16
+;	(C)  <-- COUNTER
+;
+;	CHECK TO SEE IF THE BLOCK NUMBERS IN ((HL)) OR ((DE))
+;	ARE EQUAL TO ZERO. IF ONE IS ZERO, IT IS SET TO THE
+;	VALUE OF THE OTHER. IF THE BLOCK NUMBERS ARE NOT
+;	EQUAL AFTER THIS, THERE IS AN ERROR.
+;
+	MVI	C,10H	;
+CLOSE1:	LDA	BIGDSK	;8" SD: 0FFH, LARGE CAP DISK: 00H
+	ORA	A	;
+	JZ	CLOSE4	;
+;
+;	CODE FOR 8" SD DISK
+;
+	MOV	A,M	;
+	ORA	A	;
+	LDAX	D	;
+	JNZ	CLOSE2	;
+	MOV	M,A	;
+CLOSE2:	ORA	A	;
+	JNZ	CLOSE3	;
+	MOV	A,M	;
+	STAX	D	;
+CLOSE3:	CMP	M	;
+	JNZ	CLOSE7	;ERROR
+	JMP	CLOSE5	;OK
+;
+;	CODE FOR DISK > 255K
+;		EQUIVALENT TO CODE ABOVE
+;
+CLOSE4:	CALL	CLOSE8	;
+	XCHG		;
+	CALL	CLOSE8	;
+	XCHG		;
+	LDAX	D	;
+	CMP	M	;
+	JNZ	CLOSE7	;ERROR
+	INX	D	;
+	INX	H	;
+	LDAX	D	;
+	CMP	M	;
+	JNZ	CLOSE7	;
+	DCR	C	;
+;
+;	RESUME CODE COMMON TO ALL SIZES
+;
+CLOSE5:	INX	D	;
+	INX	H	;
+	DCR	C	;
+	JNZ	CLOSE1	;
+;
+	LXI	B,-20	;
+	DAD	B	;
+	XCHG		;
+	DAD	B	;
+;	(DE)=	FCB+12
+;	(HL)=	DIR ENTRY+12
+	LDAX	D	;
+	CMP	M	;
+;	IF (DIR ENTRY+12) <= (FCB+12) THEN (DIR ENTRY+15) <-- (FCB+15)
+	JC	CLOSE6	;
+	MOV	M,A	;
+	LXI	B,03	;
+	DAD	B	;
+	XCHG		;
+	DAD	B	;
+	MOV	A,M	;
+	STAX	D	;
+;
+;	OK EXIT:	DIRECTORY WRITTEN TO DISK
+;
+CLOSE6:	MVI	A,0FFH	;
+	STA	MAKEFL	;MAKE-FILE FLAG
+	JMP	MAKES2	;EXIT VIA SET TRACK & SECTOR
+			;AND WRITE DIRECTORY TO DISK
+;
+;	ERROR EXIT:	RETURN PARAMETER SET TO 0FFH
+;			MEANING THAT FILE CANNOT BE CLOSED
+;
+CLOSE7:	LXI	H,RETPAR	;RETURN PARAMETER <-- 0FFH
+	DCR	M	;
+	RET		;
+;
+;	MAKE A NEW FILE ENTRY IN THE DIRECTORY
+;
+MAKEF:	CALL	INTRRO	;INTEROGATE CURRENT R/O STATUS
+	LHLD	ENTPAR	;GET ENTRY PARAMETER
+	PUSH	H	;STASH IT
+	LXI	H,DMYFCB ;DUMMY FCB 0E5H
+	SHLD	ENTPAR	;ENTRY PARAMETER
+;
+;	SEARCH DISK DIRECTORY FOR AN ENTRY THAT
+;	STARTS WITH 0E5H. I.E. AN UNUSED SLOT
+;
+	MVI	C,01H	;1 BYTE MATCH
+	CALL	SERCHF	;SEARCH FOR FIRST OCCURENCE OF FILE NAME
+	CALL	CHKBC1	;CHECK CONTENTS OF (BLCTR1)
+	POP	H	;
+	SHLD	ENTPAR	;RESTORE ENTRY PARAMETER
+	RZ		;ERROR EXIT- COULD NOT FIND EMPTY SLOT
+;
+	XCHG		;
+	LXI	H,15	;POINT TO FCB + 15 
+	DAD	D	;
+	MVI	C,11H	;17 BYTE COUNT
+	XRA	A	;(A) <-- 0
+MAKEF1:	MOV	M,A	;ZERO OUT FCB BYTES 15 THROUGH 32
+	INX	H	;		^
+	DCR	C	;		|
+	JNZ	MAKEF1	;---------------|
+;
+	LXI	H,13	;ZERO OUT FCB BYTE 13
+	DAD	D	;
+	MOV	M,A	;
+	CALL	SWB1D1	;
+	CALL	MAKESR	;MOVE FCB TO DIRECTORY BUFFER & WRITE
+			;DIRECTORY BUFFER TO DISK
+	JMP	SET14	;SET MSB OF FCB+14 & EXIT
+;
+;	OPEN NEXT FILE DIRECTORY EXTENT
+;
+OPNNXT:	XRA	A	;
+	STA	MAKEFL	;MAKE-FILE FLAG
+	CALL	CLOSEF	;CLOSE CURRENT EXTENT
+	CALL	CHKBC1	;CHECK CONTENTS OF (BLCTR1)
+	RZ		;ERROR EXIT...CANNOT CLOSE CURRENT EXT
+;
+	LHLD	ENTPAR	;ENTRY PARAMETER
+	LXI	B,12	;
+	DAD	B	;POINT TO FCB+12 :: EXTENT BYTE
+	MOV	A,M	;
+	INR	A	;INCREMENT EXTENT
+	ANI	1FH	;
+	MOV	M,A	;
+	JZ	OPNXT1	; EXTENT > 31
+	MOV	B,A	;
+	LDA	NLMASK	;NULL BLOCK  MASK
+	ANA	B	;
+	LXI	H,MAKEFL ;MAKE-FILE FLAG
+	ANA	M	;
+	JZ	OPNXT2	;
+	JMP	OPNXT3	;
+;
+;	EXTENT IN BYTE 12 WAS > 31
+;	INCREMENT 3RD LEVEL COUNTER
+;	IN LOWER NIBBLE OF BYTE 14
+;
+OPNXT1:	LXI	B,02	;
+	DAD	B	;(HL) <-- FCB + 14
+	INR	M	;
+	MOV	A,M	;
+	ANI	0FH	;
+	JZ	OPNXT5	;OVERFLOW ERROR
+;
+OPNXT2:	MVI	C,0FH	;15 BYTE MATCH
+	CALL	SERCHF	;SEARCH FOR FIRST OCCURENCE OF FILE NAME
+	CALL	CHKBC1	;CHECK CONTENTS OF (BLCTR1)
+	JNZ	OPNXT3	;FILE NAME FOUND
+	LDA	RDWRFL	;READ/WRITE FLAG:: 0FFH= READ/0= WRITE
+	INR	A	;
+	JZ	OPNXT5	;ERROR EXIT-TRYING TO OPEN NONEXISTENT
+			;EXTENT FOR READING
+;
+	CALL	MAKEF	;MAKE NEW DIRECTORY ENTRY
+	CALL	CHKBC1	;CHECK CONTENTS OF (BLCTR1)
+	JZ	OPNXT5	;ERROR EXIT-COULD NOT OPEN NEW EXT
+	JMP	OPNXT4	;OK
+;
+OPNXT3:	CALL	OPENF1	;OPEN THE EXTENT
+OPNXT4:	CALL	UPDATE	;UPDATE SECTOR COUNTERS
+	XRA	A	;SET OK FLAG
+	JMP	EXIT1	;STORE IT IN RETURN VALUE & EXIT
+;
+;	ERROR EXIT
+;
+OPNXT5:	CALL	EXIT2	;PUT 01 IN RETURN VALUE
+	JMP	SET14	;SET MSB OF FCB + 14 & EXIT
+;
+;	READ SECTOR TO MEMORY
+;
+;	THIS TANGLED PIECE OF CODE DOESN'T DO THE
+;	ACTUAL WRITING, JUST THE SETTING UP OF ALL
+;	KINDS OF FLAGS AND THINGS
+;
+;	ENTRY POINT FOR SEQUENTIAL READ:	RDSEQ
+;	ENTRY POINT FOR RANDOM READ:		RDSEQ1
+;
+RDSEQ:	MVI	A,01H	;READ SEQUENTIAL FILE
+	STA	SERNFL	;SEQUENTIAL/RANDOM I/O FLAG
+;
+RDSEQ1:	MVI	A,0FFH	;
+	STA	RDWRFL	;READ/WRITE FLAG
+	CALL	UPDATE	;UPDATE SECTOR COUNTERS
+	LDA	CURREC	;CURRENT RECORD:: FCB + 32
+	LXI	H,RECCTR	;FILE RECORD COUNTER:: FCB + 15
+	CMP	M	;
+	JC	RDSEQ2	;
+	CPI	80H	;
+	JNZ	RDSEQ3	;
+	CALL	OPNNXT	;
+	XRA	A	;
+	STA	CURREC	;CURRENT RECORD:: FCB + 32
+	LDA	RETPAR	;RETURN PARAMETER
+	ORA	A	;
+	JNZ	RDSEQ3	;
+RDSEQ2:	CALL	SETSC1	;
+	CALL	CHKSC1	;
+	JZ	RDSEQ3	;
+	CALL	COMSEC	;COMPUTE SECTOR NUMBER
+	CALL	TRSEC1	;
+	CALL	RDSECT	;
+	JMP	RWEXIT	;
+;
+RDSEQ3:	JMP	EXIT2	;
+;
+;	WRITE SEQUENTIAL SECTOR
+;
+;	ENTRY POINT FOR SEQUENTIAL WRITE:	WRSEQ
+;	ENTRY POINT FOR RANDOM WRITE:		WRSEQ1
+;	SERNFL= 00H FOR RANDOM WRITE (COM34)
+;	      = 02H FOR FILL RANDOM  (COM40)
+;
+WRSEQ:	MVI	A,01H	;WRITE SEQUENTIAL FILE
+	STA	SERNFL	;SEQUENTIAL/RANDOM I/O FLAG
+;
+WRSEQ1:	MVI	A,00H	;
+	STA	RDWRFL	;READ/WRITE FLAG
+	CALL	INTRRO	;INTEROGATE CURRENT R/O STATUS
+	LHLD	ENTPAR	;ENTRY PARAMETER
+	CALL	CHKRO1	;
+	CALL	UPDATE	;UPDATE SECTOR COUNTERS
+	LDA	CURREC	;CURRENT RECORD:: FCB + 32
+	CPI	80H	;
+	JNC	EXIT2	;
+	CALL	SETSC1	;
+	CALL	CHKSC1	;
+	MVI	C,00H	;
+	JNZ	WRSEQ6	;
+	CALL	BLPNTR	;
+	STA	BLKOFF	;TEMPORARY STORAGE
+	LXI	B,0000H	;
+	ORA	A	;
+	JZ	WRSEQ2	;
+	MOV	C,A	;
+	DCX	B	;
+	CALL	GETBLN	;GET BLOCK NUMBER IN (HL)
+	MOV	B,H	;
+	MOV	C,L	;(BC) <-- BLOCK NUMBER
+WRSEQ2:	CALL	WRSUB	;
+	MOV	A,L	;
+	ORA	H	;
+	JNZ	WRSEQ3	;
+	MVI	A,02H	;#2 ERROR- END OF DISK DATA
+	JMP	EXIT1	;ERROR EXIT
+;
+WRSEQ3:	SHLD	SCNTR1	;SECTOR COUNTER #1
+	XCHG		;
+	LHLD	ENTPAR	;ENTRY PARAMETER
+	LXI	B,16	;
+	DAD	B	;
+	LDA	BIGDSK	;8" SD: 0FFH, LARGE CAP DISK: 00H
+	ORA	A	;
+	LDA	BLKOFF	;TEMPORARY STORAGE
+	JZ	WRSEQ4	;
+;
+;	CODE FOR 8" S.D. SMALL DISK
+;
+	CALL	ADA2HL	;(HL) <-- (HL) + (A)
+	MOV	M,E	;STORE BLOCK NUMBER
+	JMP	WRSEQ5	;
+;
+;	CODE FOR BIG DISK
+;
+WRSEQ4:	MOV	C,A	;
+	MVI	B,00H	;
+	DAD	B	;
+	DAD	B	;POINT TO SLOT
+	MOV	M,E	;
+	INX	H	;
+	MOV	M,D	;STORE BLOCK NUMBER
+;
+;	RESUME CODE COMMON TO ALL DISKS
+;
+WRSEQ5:	MVI	C,02H	;
+WRSEQ6:	LDA	RETPAR	;RETURN PARAMETER
+	ORA	A	;
+	RNZ		;
+	PUSH	B	;
+	CALL	COMSEC	;COMPUTE SECTOR NUMBER
+	LDA	SERNFL	;SEQUENTIAL/RANDOM I/O FLAG
+	DCR	A	;CHECK TO SEE IF (SERNFL)= 2
+	DCR	A	;
+	JNZ	WRSEQ9	;NO-
+;
+;	(SERNFL) IS SET = 2 ONLY BY UNDOCUMENTED COMMAND #40
+;	THE FOLLOWING CODE WRITES 0'S TO THE DIRECTORY
+;	SECTOR, THEN WRITES THE SECTOR TO DISK
+;
+	POP	B	;
+	PUSH	B	;
+	MOV	A,C	;CHECK TO SEE IF (C)= 2, WHICH IT
+			;ALWAYS IS, BECAUSE IT WAS SET
+			;JUST 12 COMMANDS BACK. MORE USELESS
+			;CODE!
+	DCR	A	;
+	DCR	A	;
+	JNZ	WRSEQ9	;(THIS WILLNEVER HAPPEN)
+	PUSH	H	;
+;
+;	FILL ((DIRBPT)) WITH 128 0'S
+;
+	LHLD	DIRBPT	;DIRECTORY BUFFER POINTER
+	MOV	D,A	;(D) <-- 0
+WRSEQ7:	MOV	M,A	;((HL)) <-- 0
+	INX	H	;
+	INR	D	;
+	JP	WRSEQ7	;
+;
+;	WRITE BLANKED SECTOR TO DISK
+;	UNTIL ENTIRE 1K BLOCK HAS BEEN
+;	WRITTEN.
+;
+	CALL	DIRDMA	;SET DMA FOR DIRECTORY READ/WRITE
+	LHLD	SCNTR2	;SECTOR COUNTER #2
+	MVI	C,02H	;
+WRSEQ8:	SHLD	SCNTR1	;SECTOR COUNTER #1
+	PUSH	B	;
+	CALL	TRSEC1	;
+	POP	B	;
+	CALL	WRSECT	;
+	LHLD	SCNTR1	;SECTOR COUNTER #1
+	MVI	C,00H	;
+	LDA	BLMASK	;DISK BLOCK MASK
+	MOV	B,A	;
+	ANA	L	;
+	CMP	B	;
+	INX	H	;
+	JNZ	WRSEQ8	;
+	POP	H	;
+	SHLD	SCNTR1	;SECTOR COUNTER #1
+	CALL	DIRD1	;GET BACK INITIAL SECTOR OF THE 1K
+			;BLOCK, AND PREPARE TO WRITE IT
+			;BACK TO DISK (FOR REASONS UNKNOWN)
+;
+WRSEQ9:	CALL	TRSEC1	;SET UP THE TRACK & SECTOR IN BIOS
+	POP	B	;
+	PUSH	B	;
+	CALL	WRSECT	;DO THE ACTUAL WRITING OF THE SECTOR
+	POP	B	;
+	LDA	CURREC	;CURRENT RECORD:: FCB + 32
+	LXI	H,RECCTR	;FILE RECORD COUNTER: FCB + 15
+	CMP	M	;CHECK TO SEE IF BEYOND END OF EXTENT
+	JC	WRSE10	;NOT BEYOND END- SKIP
+	MOV	M,A	;AT OR BEYOND-
+	INR	M	;  INCREMENT RECORD COUNTER
+	MVI	C,02H	;  ??
+;
+;	THE FOLLOWING 5 BYTES ARE NOT NEEDED; HOWEVER
+;	THEY MAY BE THERE TO ALLOW CUSTOMIZERS TO INSERT
+;	SOMETHING WITHOUT A COMPLETE REASSEMBLY.
+;	Otherwise, your guess is as good as mine.
+;
+WRSE10:	NOP		;A blank-
+	NOP		;       and another blank.
+	LXI	H,FBASE	;Don't know what this is for.
+;
+	PUSH	PSW	;
+	CALL	FCB14	;(HL) <-- FCB + 14, (A) <-- (FCB + 14)
+	ANI	7FH	;RESET MSB OF FCB + 14
+	MOV	M,A	;
+	POP	PSW	;
+	CPI	7FH	;HAVE WE JUST WRITTEN THE LAST SECTOR
+			;IN THE CURRENT EXTENT?
+	JNZ	WRSE12	;NO-
+	LDA	SERNFL	;LOAD THE SEQUENTIAL/RANDOM I/O FLAG
+	CPI	01H	;IS THIS A SEQUENTIAL WRITE?
+	JNZ	WRSE12	;NOPE-
+	CALL	RWEXIT	;YEP- CLOSE OUT THE CURRENT EXTENT
+	CALL	OPNNXT	;     AND GO ABOUT MAKING A NEW ONE
+	LXI	H,RETPAR	;RETURN PARAMETER
+	MOV	A,M	;
+	ORA	A	;
+	JNZ	WRSE11	;
+	DCR	A	;
+	STA	CURREC	;CURRENT RECORD:: FCB + 32
+WRSE11:	MVI	M,00H	;
+WRSE12:	JMP	RWEXIT	;
+;
+;	SET PARAMETERS FOR RANDOM READ OR WRITE
+;
+;	ENTRY PARAMETER:	(C)=00H  WHEN CALLED BY RDRAND
+;				(C)=0FFH WHEN CALLED BY WRRAND
+;	EXIT PARAMETER:		(A)=00 AND ZFLAG RESET-- OK
+;				(RETPAR)<>0 & ZFLAG SET- ERROR
+;
+;	THE ENTRY PARAMETER IS PASSED THROUGH UNUSED,
+;	AND INSPECTION OF WRSEQ1 AND RDSEQ1 DOES NOT
+;	REVEAL ANY USE OF THE PARAMETER. THIS MAY BE
+;	A LEFTOVER FROM CP/M 1.4 WHEN THERE WAS ONE CALL
+;	FOR READING OR WRITING A SECTOR, WITH THE 
+;	DESIRED ACTION BEING SPECIFIED BY (C).
+;
+SETRND:	XRA	A	;
+	STA	SERNFL	;SEQUENTIAL/RANDOM I/O FLAG
+SETRN1:	PUSH	B	;
+	LHLD	ENTPAR	;ENTRY PARAMETER
+	XCHG		;
+	LXI	H,33	;
+	DAD	D	;
+	MOV	A,M	;
+	ANI	7FH	;(A) <-- (FCB+32).AND.7FH
+	PUSH	PSW	;
+	MOV	A,M	;
+	RAL		;CFLAG <-- MSB(FCB+32)
+	INX	H	;
+	MOV	A,M	;
+	RAL		;LSB(FCB+33) <-- CFLAG
+	ANI	1FH	;
+	MOV	C,A	;
+	MOV	A,M	;
+	RAR		;
+	RAR		;
+	RAR		;
+	RAR		;
+	ANI	0FH	;
+	MOV	B,A	;
+	POP	PSW	;
+	INX	H	;POINT TO FCB+35, OVERFLOW BYTE
+	MOV	L,M	;
+	INR	L	;
+	DCR	L	;SET FLAGS (8080 DOES NOT HAVE BIT OPCODE)
+	MVI	L,06H	;#6 ERROR- SEEK PAST END OF DISK
+	JNZ	SETRN5	;
+	LXI	H,32	;
+	DAD	D	;
+	MOV	M,A	;
+	LXI	H,12	;
+	DAD	D	;
+	MOV	A,C	;
+	SUB	M	;
+	JNZ	SETRN2	;
+	LXI	H,14	;
+	DAD	D	;
+	MOV	A,B	;
+	SUB	M	;
+	ANI	7FH	;
+	JZ	SETRN3	;
+SETRN2:	PUSH	B	;
+	PUSH	D	;
+	CALL	CLOSEF	;CLOSE FILE
+	POP	D	;
+	POP	B	;
+	MVI	L,03H	;
+	LDA	RETPAR	;RETURN PARAMETER
+	INR	A	;
+	JZ	SETRN4	;
+	LXI	H,12	;
+	DAD	D	;
+	MOV	M,C	;
+	LXI	H,14	;
+	DAD	D	;
+	MOV	M,B	;
+	CALL	OPENF	;OPEN FILE
+	LDA	RETPAR	;RETURN PARAMETER
+	INR	A	;
+	JNZ	SETRN3	;
+	POP	B	;
+	PUSH	B	;
+	MVI	L,04H	;#4 ERROR- SEEK TO UNWRITTEN EXTENT
+	INR	C	;
+	JZ	SETRN4	;
+	CALL	MAKEF	;MAKE NEW DIRECTORY ENTRY
+	MVI	L,05H	;#5 ERROR- CANNOT OPEN NEW DIR EXTENT
+	LDA	RETPAR	;RETURN PARAMETER
+	INR	A	;
+	JZ	SETRN4	;
+SETRN3:	POP	B	;GET BACK ENTRY PARAMETER
+	XRA	A	;CLEAR RETURN PARAMETER
+	JMP	EXIT1	;OK EXIT
+;
+SETRN4:	PUSH	H	;
+	CALL	FCB14	;(HL) <-- FCB + 14, (A) <-- (FCB + 14)
+	MVI	M,0C0H	;???????
+	POP	H	;
+SETRN5:	POP	B	;GET BACK ENTRY PARAMETER
+	MOV	A,L	;
+	STA	RETPAR	;STORE ERROR # IN RETURN PARAMETER
+	JMP	SET14	;ERROR EXIT W/ MSB OF (FCB+14) SET
+;
+;	READ RANDOM SECTOR
+;
+RDRAND:	MVI	C,0FFH	;SET PARAMETER FOR SETRND (USELESS)
+	CALL	SETRND	;
+	CZ	RDSEQ1	;IF OK CALL, ELSE DROP THROUGH
+	RET		;
+;
+;	WRITE RANDOM SECTOR
+;
+WRRAND:	MVI	C,00H	;SET PARAMETER FOR SETRND (USELESS)
+	CALL	SETRND	;
+	CZ	WRSEQ1	;IF OK CALL, ELSE DROP THROUGH
+	RET		;
+;
+;	COMPUTE ABSOLUTE SECTOR NUMBER FOR FSIZE & COM36
+;
+;ENTRY PARAMETERS:
+;		WHEN CALLED  BY FSIZE
+;		(HL)= POINTER TO CURRENT ENTRY IN DIRECTORY
+;		      BUFFER.
+;		(DE)= 15. OFFSET TO DIRECTORY RECORD COUNTER
+;
+;		WHEN CALLED BY COM36
+;		(HL)= POINTER TO  FCB, I.E. (ENTPAR)
+;		(DE)= 32. OFFSET TO RANDOM READ/WRITE COUNTER
+;
+;ON EXIT:
+;		REGISTERS A,B & C HOLD TRIPLE PRECISION SECTOR
+;		NUMBER IN THE FOLLOWING FORMAT:
+;			(C)	LOW ORDER BYTE
+;			(B)	HIGH ORDER BYTE
+;			(A)	OVERFLOW
+;
+;	(A) (B) (C) <-- (BYTE14).AND.0FH*2^12+(BYTE12).AND.1FH*2^7+(BYTE32)or(BYTE15)
+;
+RNDPAR:	XCHG		;
+	DAD	D	;
+	MOV	C,M	;
+	MVI	B,00H	;
+	LXI	H,12	;
+	DAD	D	;
+	MOV	A,M	;
+	RRC		;
+	ANI	80H	;
+	ADD	C	;
+	MOV	C,A	;(C) <-- ((HL)+(C))+(BYTE12)SHL7
+			;LOW ORDER BYTE
+	MVI	A,00H	;
+	ADC	B	;
+	MOV	B,A	;SAVE POSSIBLE CARRY BIT IN (B)
+	MOV	A,M	;
+	RRC		;
+	ANI	0FH	;
+	ADD	B	;
+	MOV	B,A	;
+	LXI	H,14	;
+	DAD	D	;
+	MOV	A,M	;(A) <-- (BYTE14)
+	ADD	A	;*2
+	ADD	A	; *4
+	ADD	A	;  *8
+	ADD	A	;   *16
+	PUSH	PSW	;SAVE FLAGS FOR POSSIBLE OVERFLOW
+	ADD	B	;
+	MOV	B,A	;(B) <-- (BYTE14)SHL4+(BYTE12).AND.1FHSHR1
+			;HIGH ORDER BYTE
+	PUSH	PSW	;
+	POP	H	;(L) <-- FLAGS
+	MOV	A,L	;(A) <-- FLAGS
+	POP	H	;(L) <-- FLAGS AGAIN
+	ORA	L	;.OR. THEM TOGETHER
+	ANI	01H	;MASK OFF ALL BUT CARRY BIT IN
+			;OVERFLOW BYTE.
+	RET		;
+;
+;	SET FILE SIZE
+;
+;	SEE NOTES AT HEAD OF BDOS COMMAND #35
+;
+FSIZE:	MVI	C,0CH	;COMPUTE FILE SIZE
+	CALL	SERCHF	;SEARCH FOR FIRST OCCURENCE OF FILE NAME
+	LHLD	ENTPAR	;ENTRY PARAMETER
+	LXI	D,33	;
+	DAD	D	;
+	PUSH	H	;
+	MOV	M,D	;(FCB+33) <-- 00H
+	INX	H	;
+	MOV	M,D	;(FCB+34) <-- 00H
+	INX	H	;
+	MOV	M,D	;(FCB+35) <-- 00H
+FSIZE1:	CALL	CHKBC1	;CHECK CONTENTS OF (BLCTR1)
+	JZ	FSIZE3	;EXIT LOOP- NO FILE NAME MATCH
+	CALL	DIRPTR	;(HL) <-- (DIRBPT) + (DIROFF)
+	LXI	D,15	;OFFSET TO RECORD COUNTER
+	CALL	RNDPAR	;GET ABSOLUTE SECTOR NUMBER IN (A)(B)(C)
+	POP	H	;
+	PUSH	H	;
+;
+;	IF (A)(B)(C) > (FCB35)(FCB34)(FCB33) THEN \
+;		(FCB35)(FCB34)(FCB33) <-- (A)(B)(C)
+;
+	MOV	E,A	;
+	MOV	A,C	;
+	SUB	M	;
+	INX	H	;
+	MOV	A,B	;
+	SBB	M	;
+	INX	H	;
+	MOV	A,E	;
+	SBB	M	;(A)(B)(C) - (FCB35)(FCB34)(FCB33)
+	JC	FSIZE2	;
+	MOV	M,E	;(FCB33) <-- LOW ORDER BYTE
+	DCX	H	;
+	MOV	M,B	;(FCB34) <-- HIGH ORDER BYTE
+	DCX	H	;
+	MOV	M,C	;(FCB35) <-- OVERFLOW BYTE
+FSIZE2:	CALL	SERCHN	;SEARCH FOR NEXT OCCURENCE OF FILE NAME
+	JMP	FSIZE1	;
+;
+FSIZE3:	POP	H	;
+	RET		;
+;
+;	BDOS COMMAND #36....SET RANDOM RECORD LENGTH
+;
+;	THIS PIECE OF CODE AUTOMATICALLY PRODUCES THE
+;	RANDOM RECORD POSITION OF A FILE THAT HAS BEEN
+;	READ OR WRITTEN TO UP TO THIS POINT.
+;
+COM36:	LHLD	ENTPAR	;ENTRY PARAMETER
+	LXI	D,32	;OFFSET TO RANDON R/W COUNTER
+	CALL	RNDPAR	;GET ABSOLUTE SECTOR NUMBER OF
+			;CURRENT SECTOR NUMBER IN (A)(B)(C)
+	LXI	H,33	;
+	DAD	D	;
+	MOV	M,C	;(FCB33) <-- LOW ORDER BYTE
+	INX	H	;
+	MOV	M,B	;(FCB34) <-- HIGH ORDER BYTE
+	INX	H	;
+	MOV	M,A	;(FCB35) <-- OVERFLOW BYTE
+	RET		;
+;
+;	BDOS COMMAND #14....SELECT DISK DRIVE
+;
+COM14:	LDA	PARAM1	;GET THE SELECTED DISK DRIVE NUMBER
+	LXI	H,CURDSK ;
+	CMP	M	;COMPARE TO CURRENT DISK NUMBER
+	RZ		;RETURN IF NO CHANGE NEEDED
+	MOV	M,A	;ELSE SET (CURDSK) TO NEW DRIVE
+;
+;	HERE WE HAVE THE WAY THAT DISKS ARE LOGGED,
+;
+LOGIN:	LHLD	LOGVEC	;LOG IN VECTOR
+	LDA	CURDSK	;
+	MOV	C,A	;
+	CALL	SHRHLC	;SHIFT (HL) RIGHT PER COUNT IN (C)
+	PUSH	H	;
+	XCHG		;
+	CALL	SETDSK	;SET UP DISK PARAMETERS
+	POP	H	;
+	CZ	SELERR	;DISK SELECT ERROR
+	MOV	A,L	;LOG IN BIT IN LSB(A)
+	RAR		;CHECK TO SEE IF ON MAP
+	RC		;OK- DISK ALREADY LOGGED IN
+	LHLD	LOGVEC	;LOG IN VECTOR
+	MOV	C,L	;
+	MOV	B,H	;
+	CALL	SETVEC	;NEW DISK- PUT ON THE MAP
+	SHLD	LOGVEC	;LOG IN VECTOR
+;
+;	SECOND HALF OF DISK LOG-IN PROCEDURES
+;
+LOGIN1:	LHLD	ALLOC0	;
+	MOV	B,H	;PUT THE NUMBER OF ALLOCATION BYTES
+	MOV	C,L	; INTO (BC)
+	LHLD	DALLOC	;POINT TO START OF ALLOCATION BLOCK
+LOGIN2:	MVI	M,00H	;ZERO OUT THE ALLOCATION BLOCK
+	INX	H	;
+	DCX	B	;
+	MOV	A,B	;
+	ORA	C	;
+	JNZ	LOGIN2	;
+;
+	LHLD	ALLOC0	;SIZE OF ALLOCATION BLOCK
+	XCHG		;
+	LHLD	DALLOC	;
+	MOV	M,E	;
+	INX	H	;
+	MOV	M,D	;(DALLOC) <-- ((ALLOC0))
+	CALL	SETDIR	;
+	LHLD	DWORD1	;
+	MVI	M,03H	;
+	INX	H	;
+	MVI	M,00H	;((DWORD1)) <-- 0003H
+	CALL	SETBC1	;SET (BLCTR1) <-- -1
+LOGIN3:	MVI	C,0FFH	;
+	CALL	GETDIR	;GET DIRECTORY SECTOR
+	CALL	CHKBC1	;CHECK CONTENTS OF (BLCTR1)
+	RZ		;
+	CALL	DIRPTR	;(HL) <-- (DIRBPT) + (DIROFF)
+	MVI	A,0E5H	;
+	CMP	M	;CHECK FOR UNUSED DIRECTORY ENTRY
+	JZ	LOGIN3	;NOT IN USE- GO LOOK FOR ANOTHER
+;
+;	CHECK TO SEE IF FIRST BYTE OF FCB MATCHES
+;	THE CURRENT USER NUMBER.
+;
+	LDA	USERNO	;
+	CMP	M	;
+	JNZ	LOGIN4	;NO MATCH- SKIP IT
+	INX	H	;MATCH- CHECK TO SEE IF THIS IS SOME
+	MOV	A,M	;       SORT OF TEMPORARY FILE OF THE
+	SUI	'$'	;       $$$.EXT VARIETY
+	JNZ	LOGIN4	; NO MATCH- JUST SKIP
+	DCR	A	;MATCH- SO MAKE RETURN PARAMETER= 0FFH
+	STA	RETPAR	;RETURN PARAMETER
+LOGIN4:	MVI	C,01H	;
+	CALL	BLKMAP	;
+	CALL	SWB1D1	;
+	JMP	LOGIN3	;LOOP
+;
+;	SET UP THE DISK PARAMETERS
+;
+;	ALL BDOS COMMANDS THAT USE THE DISKS MUST
+;	MAKE A PASS THROUGH THIS SUBROUTINE
+;
+;	NOTE:
+;		THE DIGITAL RESEARCH DOCUMENTATION DOES
+;		NOT MENTION WHAT IS DONE WITH THE USER
+;		NUMBER. WELL HERE IT IS.....
+;		THE USER NUMBER IS PUT INTO THE FIRST
+;		BYTE OF THE DIRECTORY ENTRY. USER 0
+;		IS THEREFORE COMPATIBLE WITH CP/M 1.4
+;		BUT HIGHER USER NUMBERS ARE NOT.
+;		TRY CREATING A DUMMY FILE WITH VARIOUS
+;		USER NUMBERS, THEN INSPECTING THE
+;		DIRECTORY TRACK WITH SPAT.
+;		THIS PIECE OF CODE PUTS THE CURRENT
+;		USER NUMBER INTO THE START OF THE
+;		FILE CONTROL BLOCK SO THAT A MATCH CAN
+;		BE MADE DURING DIRECTORY SEARCHES.
+;
+SETUP:	MVI	A,0FFH	;SET FLAG TO TELL BDOS2 THAT
+	STA	SETUPF	;  THE DISKS HAVE BEEN USED
+	LHLD	ENTPAR	;(HL) <-- ENTRY PARAMETER
+	MOV	A,M	;GET THE DISK NUMBER FROM FCB
+	ANI	1FH	;DISK NUMBER TO BE IN RANGE OF
+			;0 TO 1FH. I.E. DRIVES A THROUGH P
+	DCR	A	;
+	STA	PARAM1	;STORE IT FOR SELDSK
+	CPI	1EH	;
+	JNC	SETUP1	;SKIP OVER- ACCESSING LOGGED IN DISK
+;
+	LDA	CURDSK	;SAVE CURRENT DISK NUMBER IN
+	STA	LOGDSK	;LOGDSK FOR RESTORING ON EXIT
+	MOV	A,M	;GET DISK NUMBER FROM FCB AGAIN
+	STA	DISKNO	;SAVE IT
+;
+;	THE REASON FOR SETTING THE UPPER 3 BITS OF
+;	(FCB+12) WITH THE UPPER 3 BITS OF THE DRIVE
+;	NUMBER BROUGHT IN IN THE ENTRY PARAMETER IS
+;	NOT DOCUMENTED. THIS MAY BE SOME SORT OF
+;	PASSWORD SECURITY SYSTEM
+;
+	ANI	0E0H	;KEEP UPPER 3 BITS
+	MOV	M,A	; AND PUT THEM BACK IN FCB
+	CALL	COM14	;SELECT DISK DRIVE
+SETUP1:	LDA	USERNO	;GET THE USER NUMBER
+	LHLD	ENTPAR	;GET THE ENTRY PARAMETER
+			;WHICH WAS ALREADY THERE
+			;ANOTHER EXAMPLE OF REDUNDANCY
+	ORA	M	;COMBINE USER NUMBER W/ (FCB)
+	MOV	M,A	;MOVE INTO FIRST BYTE OF FCB
+	RET		;
+;
+;	BDOS COMMAND #12....RETURN THE CURRENT CP/M VERSION
+;
+;	THIS REPLACES A RETURN WITH 00 IN CP/M 1.4
+;	AND EARLIER. THIS IS USED BY CBASIC2 TO
+;	DETERMINE IF RANDOM READ/WRITE IS POSSIBLE.
+;
+COM12:	MVI	A,VER*16+REL	;LOAD VERSION NUMBER
+	JMP	EXIT1	;MOVE IT TO RETURN PARAMETER & EXIT
+;
+;	BDOS COMMAND #13....RESET DISK SYSTEM
+;
+COM13:	LXI	H,0000H	;
+	SHLD	ROWORD	;CLEAR READ ONLY WORD
+	SHLD	LOGVEC	;  AND LOG IN VECTOR
+	XRA	A	;CLEAR CURRENT DISK
+	STA	CURDSK	;
+	LXI	H,DDMA	;SET TO DEFAULT DMA ADDRESS
+	SHLD	CURDMA	;
+	CALL	DIRD1	;
+	JMP	LOGIN	;LOG-IN THE DISK & EXIT
+;
+;	BDOS COMMAND #14....OPEN FILE
+;
+COM15:	CALL	ZRFCTR	;ZERO OUT FCB COUNTER
+	CALL	SETUP	;SET UP DISK PARAMETERS
+	JMP	OPENF	;OPEN FILE & EXIT
+;
+;	BDOS COMMAND #14....CLOSE FILE
+;
+COM16:	CALL	SETUP	;SET UP DISK PARAMETERS
+	JMP	CLOSEF	;CLOSE FILE & EXIT
+;
+;	BDOS COMMAND #17....SEARCH FOR FIRST OCCURENCE
+;			    OF FILENAME.EXT IN DIRECTORY
+;
+COM17:	MVI	C,00H	;
+	XCHG		;
+	MOV	A,M	;
+	CPI	'?'	;FIRST FCB BYTE A WILDCARD?
+	JZ	COM17A	;
+	CALL	FCB12	; (HL) <-- FCB + 12 , EXT BYTE PTR
+	MOV	A,M	;
+	CPI	'?'	;EXTENT BYTE A WILDCARD?
+	CNZ	ZRFCTR	;ZERO OUT FCB COUNTER
+	CALL	SETUP	;SET UP DISK PARAMETERS
+	MVI	C,0FH	;15 BYTE SEARCH
+COM17A:	CALL	SERCHF	;SEARCH FOR FIRST OCCURENCE OF FILE NAME
+	JMP	MOVSEC	;SECTOR MOVE ((CURDMA)) <-- ((DIRBPT))
+;
+;	BDOS COMMAND #18....SEARCH FOR NEXT OCCURERENCE
+;			    OF FILENAME.EXT IN DIRECTORY.
+;
+;	PICKS UP POINTER TO FILE CONTROL BLOCK LEFT BY
+;	THE FIRST SEARCH. IF THERE HAS BEEN A USE OF
+;	THE DIRECTORY SEARCH BETWEEN THE FIRST CALL AND
+;	THIS ONE, WATCH OUT...CP/M IS NOT REENTRANT SO
+;	YOU MAY NOT HAVE WHAT YOU THINK YOU HAVE.
+;	OF PARTICULAR DANGER ARE READ AND WRITE OPERATIONS
+;	TO ANOTHER FILE BECAUSE THEY MAY HAVE TO OPEN UP
+;	NEW DIRECTORY EXTENTS WITHOUT YOUR KNOWING ABOUT IT.
+;
+COM18:	LHLD	SRCHFP	;SEARCH FCB POINTER, SET BY SERCHF
+	SHLD	ENTPAR	;ENTRY PARAMETER
+	CALL	SETUP	;
+	CALL	SERCHN	;SEARCH FOR NEXT OCCURENCE OF FILE NAME
+	JMP	MOVSEC	;SECTOR MOVE ((CURDMA)) <-- ((DIRBPT))
+;
+;	BDOS COMMAND  #19....DELETE A FILE FROM THE DISK
+;
+COM19:	CALL	SETUP	;SET UP DISK PARAMETERS
+	CALL	DELETE	;GO DELETE THE FILE
+	JMP	EXIT3	;MOVE SEARCH RESULT TO RETURN
+			;VALUE & EXIT
+;
+;	BDOS COMMAND #20....READ SECTOR FROM DISK TO MEMORY
+;
+COM20:	CALL	SETUP	;SET UP DISK PARAMETERS
+	JMP	RDSEQ	;READ SEQUENTIAL FILE & EXIT
+;
+;	BDOS COMMAND #21....WRITE SECTOR FROM MEMORY TO DISK
+;
+COM21:	CALL	SETUP	;SET UP DISK PARAMETERS
+	JMP	WRSEQ	;WRITE SEQUENTIAL FILE & EXIT
+;
+;	BDOS COMMAND #22....CREATE A NEW ENTRY IN DIRECTORY
+;
+COM22:	CALL	ZRFCTR	;ZERO OUT FCB COUNTER
+	CALL	SETUP	;SET UP DISK PARAMETERS
+	JMP	MAKEF	;MAKE NEW DIRECTORY ENTRY & EXIT
+;
+;	BDOS COMMAND #23....RENAME EXISTING FILE
+;
+COM23:	CALL	SETUP	;SET UP DISK PARAMETERS
+	CALL	RENAME	;DO THE RENAMING
+	JMP	EXIT3	;PUT MARKER IN RETURN VALUE & EXIT
+;
+;	BDOS COMMAND #24....RETURN LOG-IN VECTOR
+;
+;	LOG-IN VECTOR IS A 16 BIT WORD THAT SHOWS WHICH
+;	DRIVES HAVE BEEN LOGGED IN. LSB= DRIVE A,
+;	MSB= DRIVE P.
+;	
+COM24:	LHLD	LOGVEC	;GET LOG IN VECTOR IN (HL)
+	JMP	COM31A	;PUT IT IN RETURN VALUE & EXIT
+;
+;	BDOS COMMAND #25....RETURN CURRENT DISK NUMBER
+;
+COM25:	LDA	CURDSK	;GET CURRENT DISK NUMBER
+	JMP	EXIT1	;PUT IT IN RETURN VALUE & EXIT
+;
+;	BDOS COMMAND #26....SET CURRENT DMA ADDRESS
+;
+COM26:	XCHG		;MOVE ADDRESS INTO (HL)
+	SHLD	CURDMA	;STORE IT
+	JMP	DIRD1	;GO SET ADDRESS VIA BIOS CALL
+;
+;	BDOS COMMAND #27....INTEROGATE DISK ALLOCATION
+;
+;	BRINGS BACK ADDRESS OF START OF DISK ALLOCATION
+;	MAP. GENERALLY USED FOR DISK STATUS PROGRAMS
+;
+COM27:	LHLD	DALLOC	;GET POINTER TO ALLOCATION MAP
+	JMP	COM31A	;STORE IN RETURN VALUE & EXIT
+;
+;	BDOS COMMAND #29....GET DISK WRITE PROTECT STATUS WORD
+;
+;	BRINGS BACK 16 BIT WORD. FORMAT IS SIMILAR TO
+;	LOG-IN VECTOR EXCEPT THAT A SET BIT MEANS
+;	THAT THE DISK IS READ ONLY
+;
+COM29:	LHLD	ROWORD	;* GET R/O VECTOR ADDRESS
+	JMP	COM31A	;STORE IN RETURN VALUE & EXIT
+;
+;	BDOS COMMAND #30....SET FILE ATTRIBUTES
+;
+;	USED TO SET A FILE TO READ ONLY, OR TO MAKE
+;	A SYSTEM FILE INVISIBLE TO DIRECTORY READS
+;
+;	ON ENTRY THE FILE CONTROL BLOCK CONTAINS THE
+;	FILENAME.EXT EXACTLY AS IT WILL GO INTO THE
+;	DIRECTORY. THIS MEANS THAT THE MSB OF BYTES
+;	T1 AND T2 MUST BE SET FOR R/O AND SYSTEM FILES.
+;	A FILE OF THE SAME NAME & EXT MUST ALREADY
+;	EXIST IN MEMORY.
+;
+COM30:	CALL	SETUP	;SET UP DISK PARAMETERS
+	CALL	ATTRIB	;GO SET ATTRIBUTES
+	JMP	EXIT3	;STORE FLAG IN RETURN VALUE & EXIT
+;
+;	BDOS COMMAND #31....GET DISK PARAMETER ADDRESS
+;
+;	BRINGS BACK POINTER TO START OF 15 BYTE
+;	DISK PARAMETER BLOCK.
+;
+COM31:	LHLD	DPBLK	;* GET DISK PARAMETER ADDRESS
+COM31A:	SHLD	RETPAR	;STORE IN RETURN PARAMETER
+	RET		;EXIT
+;
+;	BDOS COMMAND #32....SET/GET USER NUMBER
+;
+;	ENTRY PARAMETER IS CHECKED AND IF IT IS 0FFH
+;	THE CURRENT USER NUMBER IS RETURNED, ELSE
+;	VALUE OF THE ENTRY PARAMETER IS SET AS THE
+;	CURRENT USER NUMBER.
+;
+COM32:	LDA	PARAM1	;GET THE ENTRY PARAMETER
+	CPI	0FFH	;CHECK IT
+	JNZ	SETUSR	;NOT 0FFH- GO SET THE NUMBER
+	LDA	USERNO	;IT IS 0FFH- GET THE USER NUMBER
+	JMP	EXIT1	;PUT IN RETURN VALUE & EXIT
+;
+SETUSR:	ANI	1FH	;NUMBER MUST BE IN THE RANGE
+	STA	USERNO	;OF 00 TO 31
+	RET		;EXIT
+;
+;	BDOS COMMAND #33....READ RANDOM FILE
+;
+;	ON ENTRY FCB BYTES 33 AND 34 CONTAIN SECTOR
+;	NUMBER IN THE RANGE OF 0 TO 65535. FILE
+;	MUST HAVE BEEN PREVIOUSLY OPENED FOR
+;	RANDOM READING.
+;
+COM33:	CALL	SETUP	;SET UP DISK PARAMETERS
+	JMP	RDRAND	;GO READ THE SECTOR
+;
+;	BDOS COMMAND #34....WRITE RANDOM FILE
+;
+;	SAME AS ABOVE, EXCEPT THAT THE SECTOR
+;	IS WRITTEN TO.
+;
+COM34:	CALL	SETUP	;SET UP DISK PARAMETERS
+	JMP	WRRAND	;GO WRITE THE SECTOR
+;
+;	BDOS COMMAND #35....COMPUTE FILE SIZE
+;
+;	BRINGS BACK THE NUMBER OF THE LAST SECTOR
+;	OF A FILE IN FCB BYTES 33 & 34. USED TO
+;	CHANGE FROM SEQUENTIAL TO RANDOM WRITING
+;	OF A FILE AFTER PART OF THE FILE HAS BEEN
+;	SEQUENTIALLY WRITTEN.
+;
+COM35:	CALL	SETUP	;SET UP DISK PARAMETERS
+	JMP	FSIZE	;GO COMPUTE FILE SIZE
+;
+;	BDOS COMMAND #37....UNDOCUMENTED COMMAND
+;
+;	THIS COMMAND UNLOGS AND UNPROTECTS SELECTED
+;	DISK DRIVES. ON ENTRY A 16 BIT WORD WITH
+;	BITS SET CORRESPONDING TO THE DRIVES TO BE
+;	CLEARED IS USED  TO CLEAR THE CORRESPONDING
+;	BITS FROM THE LOG-IN AND R/OJ WORDS
+;
+COM37:	LHLD	ENTPAR	;GET LOG-OFF WORD
+	MOV	A,L	;COMPLEMENT IT
+	CMA		;
+	MOV	E,A	;
+	MOV	A,H	;
+	CMA		;
+	LHLD	LOGVEC	;GET LOG IN VECTOR
+	ANA	H	;.AND. OUT THE LOG-IN WORD
+	MOV	D,A	;
+	MOV	A,L	;
+	ANA	E	;
+	MOV	E,A	;PLACE RESULT IN (DE)
+	LHLD	ROWORD	;GET THE WRITE PROTECT STATUS WORD
+	XCHG		;PUT IT IN (DE)
+	SHLD	LOGVEC	;STORE THE UPDATED LOG IN VECTOR
+	MOV	A,L	;.AND. IT WITH THE R/O WORD TO
+	ANA	E	; REMOVE ANY LOGGED OUT BITS
+	MOV	L,A	;
+	MOV	A,H	;
+	ANA	D	;
+	MOV	H,A	;
+	SHLD	ROWORD	;STORE UPDATED R/O WORD
+	RET		;EXIT
+;
+;	EXIT POINT FOR ALL BDOS COMMANDS
+;
+;	CHECK IS MADE AS TO WHETHER DISK WAS USED DURING
+;	THE BDOS CALL. IF IT WAS, THE APPROPRIATE DISK
+;	NUMBER IS PUT BACK INTO THE FIRST BYTE OF THE
+;	FILE CONTROL BLOCK.
+;	THE RETURN PARAMETER IS PICKED UP AND PLACED IN
+;	BOTH (HL) AND (A) & (B). THE USE OF (A) & (B) IS
+;	DONE TO MAINTAIN COMPATABILITY WITH CP/M 1.4
+;
+BDOS2:	LDA	SETUPF	;WAS DISK USED?
+	ORA	A	;
+	JZ	BDOS3	;NO- SKIP OVER
+;
+	LHLD	ENTPAR	;POINT TO START OF FCB
+	MVI	M,00H	;SET TO CURRENT DRIVE
+	LDA	DISKNO	; AHA, BUT WAS IT A TRANSIENT DRIVE?
+	ORA	A	;
+	JZ	BDOS3	;NO- SKIP OVER
+	MOV	M,A	;YES- SET BACK TO CORRECT DRIVE
+	LDA	LOGDSK	;NOW GET LOGGED IN DRIVE NUMBER
+	STA	PARAM1	; PUT IT IN PLACE FOR DISK CHANGE
+	CALL	COM14	;SELECT LOGGED-IN DISK DRIVE
+BDOS3:	LHLD	PSTACK	;RESTORE CALLING PROGRAM STACK POINTER
+	SPHL		;
+	LHLD	RETPAR	;GET RETURN PARAMETER IN (HL)
+	MOV	A,L	;ECHO IT IN (A) & (B)
+	MOV	B,H	;
+	RET		;GRAND EXIT FROM BDOS..........
+			;...............BACK TO CALLER.
+;
+;	BDOS COMMAND #40....UNDOCUMENTED COMMAND
+;
+;	EXACT USE HAS NOT BEEN DETERMINED AS YET,
+;	BUT IT SEEMS TO BE SOME SORT OF RANDOM
+;	WRITE.
+;	....MUST LOOK INTO THIS FURTHER.
+;
+COM40:	CALL	SETUP	;SET UP DISK PARAMETERS
+	MVI	A,02H	;SET SERNFL TO 02 (ALL OTHER
+			;TIMES IT IS SET TO 00 OR 0FFH)
+	STA	SERNFL	;SEQUENTIAL/RANDOM I/O FLAG
+	MVI	C,00H	;WRITE FLAG
+	CALL	SETRN1	;SET UP THE RANDOM PARAMETERS
+	CZ	WRSEQ1	;WRITE A SECTOR
+	RET		;
+;
+;	END OF PROGRAM AREA.........
+;	..........START OF PARAMETER
+;	STORAGE AREA #2.............
+;
+DMYFCB:	DB	0E5H	;DUMMY FCB- USED FOR SEARCHING FOR
+			;UNUSED DIRECTORY SLOTS
+ROWORD:	DW	0000H	;READ ONLY DISK STATUS WORD
+LOGVEC:	DW	0000H	;LOG IN VECTOR
+CURDMA:	DW	DDMA	;CURRENT DMA ADDRESS. INTIALLY = DDMA
+DWORD1:	DW	0000H	;
+DWORD2:	DW	0000H	;
+DWORD3:	DW	0000H	;
+DIRBPT:	DW	0000H	;DIRECTORY BUFFER POINTER
+DPBLK:	DW	0000H	;DISK PARAMETER BLOCK POINTER
+DIRCRC:	DW	0000H	;DIRECTORY CHECKSUM BLOCK POINTER
+DALLOC:	DW	0000H	;ALLOCATION BIT MAP POINTER
+;
+;	DISK PARAMETER BLOCK
+;	Moved into place when disk is logged in
+;
+SECTRS:	DW	0000H	;SECTORS PER TRACK
+BLSHFT:	DB	00H	;BLOCK SHIFT FACTOR
+BLMASK:	DB	00H	;DISK BLOCK MASK
+NLMASK:	DB	00H	;NULL BLOCK  MASK
+DSKSIZ:	DW	0000H	;DISK SIZE, # OF 1K BLOCKS -1
+DIRMAX:	DW	0000H	;MAX NUMBER OF ENTRIES IN DIRECTORY
+ALLOC0:	DW	0000H	;SIZE OF ALLOCATION BLOCK
+CHKSIZ:	DW	0000H	;NUMBER OF DIRECTORY SECTORS TO BE CHECKED
+DIRTRK:	DW	0000H	;DIRECTORY TRACK NUMBER
+;
+SECTBL:	DW	0000H	;VECTOR TO SECTOR TRANSLATION TABLE
+MAKEFL:	DB	00H	;MAKE-FILE FLAG
+RDWRFL:	DB	00H	;READ/WRITE FLAG
+SRCHFL:	DB	00H	;POINTER SET TO 0FFH BY SERCHF AND
+			;CLEARED TO 00 WHEN A FILE NAME MATCH
+			;HAS BEEN MADE
+SERNFL:	DB	00H	;SEQUENTIAL/RANDOM I/O FLAG
+			;SET 01 FOR SEQUENTIAL READ/WRITE
+			;SET 00 FOR RANDOM READ/WRITE
+			;SET 02 FOR UNDOCUMENTED COMMAND #40
+PARAM1:	DB	00H	;SET TO (E) ON ENTRY TO BDOS, THEN
+			;USED TO STORE DISK NUMBER
+BLKOFF:	DB	00H	;TEMPORARY STORAGE FOR OFFSET TO BLOCK
+			;NUMBER IN DIRECTORY DURING WRSEQ.
+			;POINTS TO BYTE(S) THAT CONTAIN THE
+			;CURRENT BLOCK NUMBER. WHEN THE 8TH
+			;SECTOR OF THE BLOCK HAS BEEN WRITTEN,
+			;BLKOFF IS INCREMENTED AND A NEW BLOCK
+			;SELECTED.
+SRCHCT:	DB	00H	;SEARCH COUNTER-NUMBER OF BYTES TO BE
+			;COMPARED BETWEEN THE FILE CONTROL
+			;BLOCK AND THE DIRECTORY ENTRY. THE
+			;COUNT IS SET ON ENTRY VIA SERCHF &
+			;PICKED UP FOR USE BY SERCHN
+SRCHFP:	DW	0000H	;SEARCH FCB POINTER, SET BY SERCHF/SERCHN
+	DW	0000H	;(NOT USED)
+BIGDSK:	DB	00H	;8" SD: 0FFH, LARGE CAP DISK: 00H
+SETUPF:	DB	00H	;
+LOGDSK:	DB	00H	;
+DISKNO:	DB	00H	;
+RECCTR:	DB	00H	;FILE RECORD COUNTER:: FCB + 15
+EXTCTR:	DB	00H	;FILE EXTENT COUNTER: FCB + 12
+CURREC:	DW	0000H	;CURRENT RECORD:: FCB + 32
+SCNTR1:	DW	0000H	;SECTOR COUNTER #1
+SCNTR2:	DW	0000H	;SECTOR COUNTER #2
+DIROFF:	DB	00H	;DIRECTORY OFFSET
+BLCTR1:	DW	0000H	;BLOCK COUNTER #1
+BLCTR2:	DW	0000H	;BLOCK COUNTER #2
+;
+FINISH: END	FBASE	;END OF SOURCE CODE
+

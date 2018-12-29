@@ -1,0 +1,1530 @@
+	ORG	00100H
+Y0000	EQU	00000H
+Y0004	EQU	00004H
+X0005	EQU	00005H
+Y0007	EQU	00007H
+Y0080	EQU	00080H
+Y0088	EQU	00088H
+Y008A	EQU	0008AH
+X008C	EQU	0008CH
+X0092	EQU	00092H
+X0098	EQU	00098H
+X00A2	EQU	000A2H
+X00A7	EQU	000A7H
+X00AC	EQU	000ACH
+X00B8	EQU	000B8H
+X00BD	EQU	000BDH
+X00C3	EQU	000C3H
+X00CB	EQU	000CBH
+X00D0	EQU	000D0H
+X00DA	EQU	000DAH
+X00DF	EQU	000DFH
+X00E4	EQU	000E4H
+X00E9	EQU	000E9H
+X00EF	EQU	000EFH
+X00F4	EQU	000F4H
+X00F9	EQU	000F9H
+X00FE	EQU	000FEH
+X0A09	EQU	00A09H
+X1600	EQU	01600H
+X3000	EQU	03000H
+X3007	EQU	03007H
+X3015	EQU	03015H
+X301B	EQU	0301BH
+XFF0F	EQU	0FF0FH
+A0100:	NOP
+	NOP
+	NOP
+	NOP
+A0104:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A0109:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A010E:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A0113:	NOP
+	NOP
+A0115:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A011A:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A0129:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A0130:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A0139:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	LD	SP,A0100
+	IN	A,(079H)
+	IN	A,(07BH)
+	IN	A,(0FFH)
+	AND	002H
+	JP	NZ,X3007
+	OUT	(07FH),A
+	LD	B,002H
+	LD	HL,03042H
+	LD	A,L
+A0196:	OUT	(079H),A
+	LD	A,H
+	OUT	(07AH),A
+	IN	A,(078H)
+	AND	004H
+	JP	Z,X301B
+	IN	A,(079H)
+	AND	003H
+	CP	002H
+	JP	NC,X3000
+A01AB:	IN	A,(07BH)
+	RLA
+	CALL	C,XFF0F
+	RRA
+	AND	01EH
+	JP	NZ,X3000
+	LD	DE,00007H
+A01BA:	ADD	HL,DE
+	DEC	B
+	JP	NZ,X3015
+	JP	X1600
+
+A01C2:	ADD	A,B
+	INC	B
+	ADD	HL,DE
+	NOP
+	LD	(BC),A
+	NOP
+	NOP
+	ADD	A,B
+	INC	B
+	JR	A01CE
+
+;>> No execution path to here <<
+	LD	BC,00C80H
+A01D0:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A01D5:	NOP
+	NOP
+	NOP
+A01D8:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A01DD:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A01F5:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A01FD:	NOP
+	NOP
+	NOP
+	JP	A035C
+
+;>> No execution path to here <<
+	JP	A0358
+
+;>> No execution path to here <<
+	LD	A,A
+	NOP
+	JR	NZ,A022A
+	JR	NZ,A022C
+	JR	NZ,A022E
+	JR	NZ,A0230
+	JR	NZ,A0232
+	JR	NZ,A0234
+	JR	NZ,A0236
+	JR	NZ,A0238
+	LD	B,E
+	LD	C,A
+	LD	D,B
+	LD	E,C
+	LD	D,D
+	LD	C,C
+	LD	B,A
+	LD	C,B
+	LD	D,H
+	JR	NZ,A024B
+	LD	B,E
+	ADD	HL,HL
+	JR	NZ,A0258
+	ADD	HL,SP
+	SCF
+	ADD	HL,SP
+A022A:	INC	L
+	JR	NZ,A0271
+	LD	C,C
+A022E:	LD	B,A
+	LD	C,C
+A0230:	LD	D,H
+	LD	B,C
+A0232:	LD	C,H
+	JR	NZ,A0287
+	LD	B,L
+A0236:	LD	D,E
+	LD	B,L
+A0238:	LD	B,C
+	LD	D,D
+	LD	B,E
+	LD	C,B
+	JR	NZ,A025E
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A024B:	NOP
+	NOP
+	NOP
+	NOP
+A024F:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A0258:	NOP
+A0259:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A025E:	NOP
+	NOP
+A0260:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A0271:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A0287:	NOP
+	EX	AF,AF'
+A0289:	NOP
+	NOP
+	NOP
+	LD	E,A
+	LD	C,002H
+	JP	X0005
+
+;>> No execution path to here <<
+	PUSH	BC
+	CALL	X008C
+A0296:	POP	BC
+	RET
+
+A0298:	LD	A,00DH
+	CALL	X0092
+	LD	A,00AH
+	JP	X0092
+
+;>> No execution path to here <<
+	LD	A,020H
+	JP	X0092
+
+;>> No execution path to here <<
+	PUSH	BC
+	CALL	X0098
+A02AB:	POP	HL
+	LD	A,(HL)
+	OR	A
+	RET	Z
+A02AF:	INC	HL
+	PUSH	HL
+	CALL	X008C
+	POP	HL
+	JP	X00AC
+
+;>> No execution path to here <<
+	LD	C,00DH
+	JP	X0005
+
+;>> No execution path to here <<
+	LD	E,A
+	LD	C,00EH
+A02C0:	JP	X0005
+
+;>> No execution path to here <<
+	CALL	X0005
+	LD	(D07EE),A
+	INC	A
+	RET
+
+;>> No execution path to here <<
+	LD	C,00FH
+	JP	X00C3
+
+;>> No execution path to here <<
+	XOR	A
+	LD	(D07ED),A
+	LD	DE,D07CD
+	JP	X00CB
+
+;>> No execution path to here <<
+	LD	C,010H
+	JP	X00C3
+
+A02DF:	LD	C,011H
+	JP	X00C3
+
+;>> No execution path to here <<
+	LD	C,012H
+	JP	X00C3
+
+A02E9:	LD	DE,D07CD
+	JP	X00DF
+
+;>> No execution path to here <<
+	LD	C,013H
+	JP	X0005
+
+;>> No execution path to here <<
+	CALL	X0005
+	OR	A
+	RET
+
+;>> No execution path to here <<
+	LD	C,014H
+	JP	X00F4
+
+;>> No execution path to here <<
+	LD	DE,D07CD
+A0301:	JP	X00F9
+
+;>> No execution path to here <<
+	LD	C,015H
+	JP	X00F4
+
+A0309:	LD	C,016H
+	JP	X00C3
+
+;>> No execution path to here <<
+	LD	C,017H
+	JP	X0005
+
+;>> No execution path to here <<
+	LD	E,0FFH
+	LD	C,020H
+	JP	X0005
+
+;>> No execution path to here <<
+	CALL	A0113
+	ADD	A,A
+	ADD	A,A
+	ADD	A,A
+	ADD	A,A
+	LD	HL,D07EF
+	OR	(HL)
+	LD	(Y0004),A
+T0328:	RET
+
+;>> No execution path to here <<
+	LD	A,(D07EF)
+	LD	(Y0004),A
+	RET
+
+;>> No execution path to here <<
+	CP	061H
+	RET	C
+A0333:	CP	07BH
+	RET	NC
+	AND	05FH
+	RET
+
+;>> No execution path to here <<
+	LD	A,(D07AB)
+A033C:	OR	A
+	JP	Z,A0196
+	LD	A,(D07EF)
+	OR	A
+	LD	A,000H
+	CALL	NZ,X00BD
+	LD	DE,T07AC
+	CALL	X00CB
+A034F:	JP	Z,A0196
+	LD	A,(D07BB)
+	DEC	A
+	LD	(D07CC),A
+	LD	DE,T07AC
+A035C:	CALL	X00F9
+	JP	NZ,A0196
+	LD	DE,00007H
+	LD	HL,00080H
+	LD	B,080H
+	CALL	A0442
+	LD	HL,T07BA
+	LD	(HL),000H
+	INC	HL
+	DEC	(HL)
+	LD	DE,T07AC
+	CALL	X00DA
+	JP	Z,A0196
+	LD	A,(D07EF)
+	OR	A
+	CALL	NZ,X00BD
+	LD	HL,00008H
+	CALL	X00AC
+	CALL	A01C2
+	JP	Z,A01A7
+	CALL	A01DD
+	JP	A0382
+
+;>> No execution path to here <<
+	CALL	A01DD
+	CALL	A011A
+	LD	C,00AH
+	LD	DE,00006H
+	CALL	X0005
+	CALL	A0129
+	LD	HL,00007H
+	LD	B,(HL)
+	INC	HL
+	LD	A,B
+	OR	A
+	JP	Z,A01BA
+	LD	A,(HL)
+	CALL	A0130
+	LD	(HL),A
+	DEC	B
+	JP	A01AB
+
+;>> No execution path to here <<
+	LD	(HL),A
+	LD	HL,00008H
+	LD	(Y0088),HL
+T03C1:	RET
+
+;>> No execution path to here <<
+	LD	C,00BH
+	CALL	X0005
+	OR	A
+	RET	Z
+	LD	C,001H
+	CALL	X0005
+	OR	A
+A03CF:	RET
+
+;>> No execution path to here <<
+	LD	C,019H
+	JP	X0005
+
+;>> No execution path to here <<
+	LD	DE,00080H
+	LD	C,01AH
+	JP	X0005
+
+;>> No execution path to here <<
+	LD	HL,D07AB
+	LD	A,(HL)
+	OR	A
+	RET	Z
+	LD	(HL),000H
+	XOR	A
+	CALL	X00BD
+	LD	DE,T07AC
+	CALL	X00EF
+	LD	A,(D07EF)
+	JP	X00BD
+
+;>> No execution path to here <<
+	LD	DE,T0328
+A03F8:	LD	HL,T0800
+	LD	B,006H
+	LD	A,(DE)
+	CP	(HL)
+	JP	NZ,A03CF
+	INC	DE
+	INC	HL
+	DEC	B
+	JP	NZ,A01FD
+A0408:	RET
+
+;>> No execution path to here <<
+	CALL	X0098
+	LD	HL,(Y008A)
+	LD	A,(HL)
+	CP	020H
+	JP	Z,A0222
+	OR	A
+	JP	Z,A0222
+	PUSH	HL
+	CALL	X008C
+	POP	HL
+	INC	HL
+	JP	A020F
+
+;>> No execution path to here <<
+	LD	A,03FH
+	CALL	X008C
+	CALL	X0098
+	CALL	A01DD
+	JP	A0382
+
+;>> No execution path to here <<
+	LD	A,(DE)
+	OR	A
+	RET	Z
+A0433:	CP	020H
+	JP	C,A0209
+	RET	Z
+	CP	03DH
+	RET	Z
+	CP	05FH
+	RET	Z
+	CP	02EH
+	RET	Z
+A0442:	CP	03AH
+	RET	Z
+	CP	03BH
+	RET	Z
+	CP	03CH
+	RET	Z
+A044B:	CP	03EH
+	RET	Z
+	RET
+
+;>> No execution path to here <<
+	LD	A,(DE)
+	OR	A
+	RET	Z
+	CP	020H
+A0454:	RET	NZ
+	INC	DE
+	JP	A024F
+
+;>> No execution path to here <<
+	ADD	A,L
+	LD	L,A
+	RET	NC
+	INC	H
+	RET
+
+;>> No execution path to here <<
+	LD	A,000H
+	LD	HL,D07CD
+	CALL	A0259
+A0466:	PUSH	HL
+	PUSH	HL
+	XOR	A
+	LD	(D07F0),A
+	LD	HL,(Y0088)
+	EX	DE,HL
+	CALL	A024F
+	EX	DE,HL
+	LD	(Y008A),HL
+	EX	DE,HL
+	POP	HL
+	LD	A,(DE)
+	OR	A
+	JP	Z,A0289
+	SBC	A,040H
+	LD	B,A
+	INC	DE
+	LD	A,(DE)
+	CP	03AH
+	JP	Z,A0290
+A0488:	DEC	DE
+	LD	A,(D07EF)
+	LD	(HL),A
+	JP	A0296
+
+;>> No execution path to here <<
+	LD	A,B
+	LD	(D07F0),A
+	LD	(HL),B
+	INC	DE
+	LD	B,008H
+A0498:	CALL	A0230
+	JP	Z,A02B9
+	INC	HL
+	CP	02AH
+	JP	NZ,A02A9
+	LD	(HL),03FH
+	JP	A02AB
+
+;>> No execution path to here <<
+	LD	(HL),A
+	INC	DE
+	DEC	B
+	JP	NZ,A0298
+	CALL	A0230
+	JP	Z,A02C0
+	INC	DE
+	JP	A02AF
+
+;>> No execution path to here <<
+	INC	HL
+	LD	(HL),020H
+	DEC	B
+	JP	NZ,A02B9
+	LD	B,003H
+	CP	02EH
+	JP	NZ,A02E9
+	INC	DE
+	CALL	A0230
+	JP	Z,A02E9
+	INC	HL
+	CP	02AH
+	JP	NZ,A02D9
+A04D4:	LD	(HL),03FH
+	JP	A02DB
+
+A04D9:	LD	(HL),A
+	INC	DE
+	DEC	B
+	JP	NZ,A02C8
+	CALL	A0230
+	JP	Z,A02F0
+	INC	DE
+	JP	A02DF
+
+;>> No execution path to here <<
+	INC	HL
+	LD	(HL),020H
+	DEC	B
+	JP	NZ,A02E9
+	LD	B,003H
+	INC	HL
+	LD	(HL),000H
+	DEC	B
+	JP	NZ,A02F2
+A04F9:	EX	DE,HL
+	LD	(Y0088),HL
+	POP	HL
+	LD	BC,0000BH
+	INC	HL
+	LD	A,(HL)
+	CP	03FH
+	JP	NZ,A0309
+	INC	B
+	DEC	C
+	JP	NZ,A0301
+	LD	A,B
+A050E:	OR	A
+A050F:	RET
+
+;>> No execution path to here <<
+	LD	B,H
+	LD	C,C
+	LD	D,D
+	JR	NZ,A055A
+	LD	D,D
+	LD	B,C
+	JR	NZ,A056D
+	LD	E,C
+	LD	D,B
+A051B:	LD	B,L
+	LD	D,E
+	LD	B,C
+	LD	D,(HL)
+	LD	B,L
+	LD	D,D
+	LD	B,L
+	LD	C,(HL)
+	JR	NZ,A057A
+	LD	D,E
+	LD	B,L
+	LD	D,D
+	NOP
+	LD	D,000H
+	NOP
+	INC	C
+	LD	H,021H
+	DJNZ	A0534
+	LD	C,000H
+	LD	A,C
+A0534:	CP	006H
+	RET	NC
+	LD	DE,D07CE
+	LD	B,004H
+	LD	A,(DE)
+	CP	(HL)
+	JP	NZ,A034F
+	INC	DE
+A0542:	INC	HL
+	DEC	B
+	JP	NZ,A033C
+	LD	A,(DE)
+	CP	020H
+	JP	NZ,A0354
+	LD	A,C
+	RET
+
+;>> No execution path to here <<
+	INC	HL
+	DEC	B
+	JP	NZ,A034F
+	INC	C
+	JP	A0333
+
+;>> No execution path to here <<
+	XOR	A
+	LD	(Y0007),A
+	LD	SP,D07AB
+	PUSH	BC
+	LD	A,C
+	RRA
+	RRA
+	RRA
+	RRA
+	AND	00FH
+	LD	E,A
+	CALL	A0115
+	CALL	X00B8
+	LD	(D07AB),A
+	POP	BC
+	LD	A,C
+	AND	00FH
+	LD	(D07EF),A
+	CALL	X00BD
+	LD	A,(Y0007)
+	OR	A
+	JP	NZ,A0398
+	LD	SP,D07AB
+	CALL	X0098
+	CALL	A01D0
+	ADD	A,041H
+	CALL	X008C
+	LD	A,03EH
+	CALL	X008C
+	CALL	A0139
+	LD	DE,00080H
+	CALL	A01D8
+	CALL	A01D0
+	LD	(D07EF),A
+	CALL	A025E
+A05A7:	CALL	NZ,A0209
+	LD	A,(D07F0)
+	OR	A
+	JP	NZ,A06A5
+	CALL	A032E
+	LD	HL,T03C1
+	LD	E,A
+	LD	D,000H
+	ADD	HL,DE
+	ADD	HL,DE
+	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	JP	(HL)
+
+;>> No execution path to here <<
+	LD	(HL),A
+	INC	B
+	RRA
+	DEC	B
+	LD	E,L
+	DEC	B
+	XOR	L
+	DEC	B
+	DJNZ	A05D1
+	ADC	A,(HL)
+	LD	B,0A5H
+	LD	B,021H
+	DI
+A05D1:	HALT
+	LD	(Y0000),HL
+	LD	HL,00000H
+	JP	(HL)
+
+;>> No execution path to here <<
+	LD	BC,T03DF
+	JP	X00A7
+
+;>> No execution path to here <<
+	LD	D,D
+	LD	B,L
+	LD	B,C
+	LD	B,H
+	JR	NZ,A062A
+	LD	D,D
+	LD	D,D
+	LD	C,A
+	LD	D,D
+	NOP
+	LD	BC,T03F0
+	JP	X00A7
+
+;>> No execution path to here <<
+	LD	C,(HL)
+A05F1:	LD	C,A
+	JR	NZ,A063A
+	LD	C,C
+	LD	C,H
+	LD	B,L
+	NOP
+	CALL	A025E
+A05FB:	LD	A,(D07F0)
+	OR	A
+	JP	NZ,A0209
+	LD	HL,D07CE
+	LD	BC,0000BH
+	LD	A,(HL)
+	CP	020H
+	JP	Z,A0433
+	INC	HL
+	SUB	030H
+	CP	00AH
+	JP	NC,A0209
+	LD	D,A
+	LD	A,B
+	AND	0E0H
+	JP	NZ,A0209
+	LD	A,B
+	RLCA
+	RLCA
+	RLCA
+	ADD	A,B
+	JP	C,A0209
+	ADD	A,B
+	JP	C,A0209
+	ADD	A,D
+A062A:	JP	C,A0209
+	LD	B,A
+	DEC	C
+	JP	NZ,A0408
+	RET
+
+;>> No execution path to here <<
+	LD	A,(HL)
+	CP	020H
+	JP	NZ,A0209
+	INC	HL
+A063A:	DEC	C
+	JP	NZ,A0433
+	LD	A,B
+A063F:	RET
+
+;>> No execution path to here <<
+	LD	B,003H
+	LD	A,(HL)
+	LD	(DE),A
+	INC	HL
+	INC	DE
+	DEC	B
+	JP	NZ,A0442
+	RET
+
+;>> No execution path to here <<
+	LD	HL,00080H
+	ADD	A,C
+	CALL	A0259
+	LD	A,(HL)
+	RET
+
+;>> No execution path to here <<
+	XOR	A
+	LD	(D07CD),A
+	LD	A,(D07F0)
+	OR	A
+	RET	Z
+	DEC	A
+	LD	HL,D07EF
+	CP	(HL)
+	RET	Z
+	JP	X00BD
+
+;>> No execution path to here <<
+	LD	A,(D07F0)
+	OR	A
+	RET	Z
+	DEC	A
+	LD	HL,D07EF
+	CP	(HL)
+	RET	Z
+	LD	A,(D07EF)
+	JP	X00BD
+
+;>> No execution path to here <<
+	CALL	A025E
+	CALL	A0454
+	LD	HL,D07CE
+	LD	A,(HL)
+	CP	020H
+	JP	NZ,A048F
+	LD	B,00BH
+	LD	(HL),03FH
+	INC	HL
+	DEC	B
+	JP	NZ,A0488
+	LD	E,000H
+	PUSH	DE
+	CALL	X00E9
+	CALL	Z,A03EA
+	JP	Z,A051B
+	LD	A,(D07EE)
+	RRCA
+	RRCA
+	RRCA
+	AND	060H
+	LD	C,A
+	LD	A,00AH
+	CALL	A044B
+	RLA
+	JP	C,A050F
+	POP	DE
+	LD	A,E
+	INC	E
+	PUSH	DE
+	AND	003H
+	PUSH	AF
+	JP	NZ,A04CC
+	CALL	X0098
+	PUSH	BC
+	CALL	A01D0
+	POP	BC
+	ADD	A,041H
+	CALL	X0092
+A06C4:	LD	A,03AH
+	CALL	X0092
+	JP	A04D4
+
+;>> No execution path to here <<
+	CALL	X00A2
+	LD	A,03AH
+	CALL	X0092
+	CALL	X00A2
+	LD	B,001H
+	LD	A,B
+	CALL	A044B
+	AND	07FH
+	CP	020H
+A06E1:	JP	NZ,A04F9
+	POP	AF
+	PUSH	AF
+	CP	003H
+	JP	NZ,A04F7
+	LD	A,009H
+	CALL	A044B
+	AND	07FH
+	CP	020H
+	JP	Z,A050E
+	LD	A,020H
+	CALL	X0092
+	INC	B
+	LD	A,B
+	CP	00CH
+	JP	NC,A050E
+	CP	009H
+	JP	NZ,A04D9
+	CALL	X00A2
+	JP	A04D9
+
+;>> No execution path to here <<
+	POP	AF
+	CALL	A01C2
+	JP	NZ,A051B
+	CALL	X00E4
+	JP	A0498
+
+;>> No execution path to here <<
+	POP	DE
+	JP	A0786
+
+;>> No execution path to here <<
+	CALL	A025E
+	CP	00BH
+	JP	NZ,A0542
+	LD	BC,T0552
+	CALL	X00A7
+	CALL	A0139
+A0730:	LD	HL,00007H
+	DEC	(HL)
+	JP	NZ,A0382
+	INC	HL
+	LD	A,(HL)
+	CP	059H
+	JP	NZ,A0382
+A073E:	INC	HL
+	LD	(Y0088),HL
+	CALL	A0454
+	LD	DE,D07CD
+	CALL	X00EF
+	INC	A
+	CALL	Z,A03EA
+A074F:	JP	A0786
+
+;>> No execution path to here <<
+	LD	B,C
+	LD	C,H
+	LD	C,H
+	JR	NZ,A077F
+	LD	E,C
+	CPL
+	LD	C,(HL)
+	ADD	HL,HL
+	CCF
+	NOP
+	CALL	A025E
+	JP	NZ,A0209
+	CALL	A0454
+	CALL	X00D0
+	JP	Z,A05A7
+	CALL	X0098
+	LD	HL,T07F1
+	LD	(HL),0FFH
+	LD	HL,T07F1
+	LD	A,(HL)
+	CP	080H
+T077A:	JP	C,A0587
+	PUSH	HL
+	CALL	X00FE
+	POP	HL
+	JP	NZ,A05A0
+	XOR	A
+A0786:	LD	(HL),A
+	INC	(HL)
+	LD	HL,00080H
+	CALL	A0259
+	LD	A,(HL)
+	CP	01AH
+	JP	Z,A0786
+	CALL	X008C
+	CALL	A01C2
+	JP	NZ,A0786
+	JP	A0574
+
+;>> No execution path to here <<
+	DEC	A
+	JP	Z,A0786
+	CALL	A03D9
+	CALL	A0466
+	JP	A0209
+
+;>> No execution path to here <<
+	CALL	A03F8
+	PUSH	AF
+	CALL	A025E
+	JP	NZ,A0209
+	CALL	A0454
+T07BA:	LD	DE,D07CD
+	PUSH	DE
+	CALL	X00EF
+	POP	DE
+	CALL	A0109
+	JP	Z,A05FB
+	XOR	A
+	LD	(D07ED),A
+D07CC:	POP	AF
+D07CD:	LD	L,A
+D07CE:	LD	H,000H
+	ADD	HL,HL
+	LD	DE,A0100
+	LD	A,H
+	OR	L
+T07D6:	JP	Z,A05F1
+	DEC	HL
+	PUSH	HL
+	LD	HL,00080H
+	ADD	HL,DE
+	PUSH	HL
+	CALL	A01D8
+	LD	DE,D07CD
+	CALL	A0104
+	POP	DE
+	POP	HL
+	JP	NZ,A05FB
+D07EE:	JP	A05D4
+
+;>> No execution path to here <<
+T07F1:	LD	DE,D07CD
+	CALL	X00DA
+	INC	A
+	JP	NZ,A0601
+	LD	BC,T0607
+	CALL	X00A7
+	CALL	A01D5
+	JP	A0786
+
+;>> No execution path to here <<
+	LD	C,(HL)
+	LD	C,A
+	JR	NZ,A085E
+	LD	D,B
+	LD	B,C
+	LD	B,E
+	LD	B,L
+	NOP
+	CALL	A025E
+	JP	NZ,A0209
+	LD	A,(D07F0)
+	PUSH	AF
+	CALL	A0454
+	CALL	X00E9
+	JP	NZ,A0679
+	LD	HL,D07CD
+	LD	DE,D07DD
+	LD	B,010H
+	CALL	A0442
+	LD	HL,(Y0088)
+	EX	DE,HL
+	CALL	A024F
+	CP	03DH
+	JP	Z,A063F
+	CP	05FH
+	JP	NZ,A0673
+	EX	DE,HL
+	INC	HL
+	LD	(Y0088),HL
+	CALL	A025E
+	JP	NZ,A0673
+	POP	AF
+	LD	B,A
+	LD	HL,D07F0
+	LD	A,(HL)
+	OR	A
+	JP	Z,A0659
+	CP	B
+	LD	(HL),B
+	JP	NZ,A0673
+	LD	(HL),B
+	XOR	A
+	LD	(D07CD),A
+A085E:	CALL	X00E9
+	JP	Z,A066D
+	LD	DE,D07CD
+	CALL	A010E
+	JP	A0786
+
+;>> No execution path to here <<
+	CALL	A03EA
+	JP	A0786
+
+;>> No execution path to here <<
+	CALL	A0466
+	JP	A0209
+
+;>> No execution path to here <<
+	LD	BC,T0682
+	CALL	X00A7
+	JP	A0786
+
+;>> No execution path to here <<
+	LD	B,(HL)
+	LD	C,C
+	LD	C,H
+	LD	B,L
+	JR	NZ,A08CD
+	LD	E,B
+	LD	C,C
+	LD	D,E
+	LD	D,H
+	LD	D,E
+	NOP
+	CALL	A03F8
+	CP	010H
+	JP	NC,A0209
+	LD	E,A
+	LD	A,(D07CE)
+	CP	020H
+	JP	Z,A0209
+	CALL	A0115
+	JP	A0789
+
+;>> No execution path to here <<
+	CALL	A01F5
+	LD	A,(D07CE)
+	CP	020H
+	JP	NZ,A06C4
+	LD	A,(D07F0)
+	OR	A
+	JP	Z,A0789
+	DEC	A
+	LD	(D07EF),A
+	CALL	A0129
+	CALL	X00BD
+	JP	A0789
+
+;>> No execution path to here <<
+	LD	DE,T07D6
+	LD	A,(DE)
+	CP	020H
+	JP	NZ,A0209
+A08CD:	PUSH	DE
+	CALL	A0454
+	POP	DE
+	LD	HL,T0783
+	CALL	A0440
+	CALL	X00D0
+	JP	Z,A076B
+	LD	HL,A0100
+	PUSH	HL
+	EX	DE,HL
+	CALL	A01D8
+	LD	DE,D07CD
+	CALL	X00F9
+	JP	NZ,A0701
+	POP	HL
+	LD	DE,00080H
+	ADD	HL,DE
+	LD	DE,00000H
+	LD	A,L
+	SUB	E
+	LD	A,H
+	SBC	A,D
+	JP	NC,A0771
+	JP	A06E1
+
+;>> No execution path to here <<
+	POP	HL
+	DEC	A
+	JP	NZ,A0771
+	CALL	A0466
+	CALL	A025E
+	LD	HL,D07F0
+	PUSH	HL
+	LD	A,(HL)
+	LD	(D07CD),A
+	LD	A,010H
+	CALL	A0260
+	POP	HL
+	LD	A,(HL)
+	LD	(D07DD),A
+	XOR	A
+	LD	(D07ED),A
+	LD	DE,0005CH
+	LD	HL,D07CD
+	LD	B,021H
+	CALL	A0442
+	LD	HL,00008H
+	LD	A,(HL)
+	OR	A
+	JP	Z,A073E
+	CP	020H
+	JP	Z,A073E
+	INC	HL
+	JP	A0730
+
+;>> No execution path to here <<
+	LD	B,000H
+	LD	DE,00081H
+	LD	A,(HL)
+	LD	(DE),A
+	OR	A
+	JP	Z,A074F
+	INC	B
+	INC	HL
+	INC	DE
+	JP	A0743
+
+;>> No execution path to here <<
+	LD	A,B
+	LD	(Y0080),A
+	CALL	X0098
+	CALL	A01D5
+	CALL	A011A
+	CALL	A0100
+	LD	SP,D07AB
+	CALL	A0129
+	CALL	X00BD
+	JP	A0382
+
+;>> No execution path to here <<
+	CALL	A0466
+	JP	A0209
+
+;>> No execution path to here <<
+	LD	BC,T077A
+	CALL	X00A7
+	JP	A0786
+
+;>> No execution path to here <<
+	LD	B,D
+	LD	B,C
+	LD	B,H
+	JR	NZ,A09CB
+	LD	C,A
+	LD	B,C
+	LD	B,H
+	NOP
+	LD	B,E
+	LD	C,A
+	LD	C,L
+	CALL	A0466
+	CALL	A025E
+	LD	A,(D07CE)
+	SUB	020H
+	LD	HL,D07F0
+	OR	(HL)
+	JP	NZ,A0209
+	JP	A0382
+
+;>> No execution path to here <<
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	INC	H
+	INC	H
+	INC	H
+	JR	NZ,A09D2
+	JR	NZ,A09D4
+	JR	NZ,X0A09
+	LD	D,L
+	LD	B,D
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A09CB:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+A09D2:	NOP
+	NOP
+A09D4:	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	END
+

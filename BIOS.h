@@ -20,7 +20,7 @@ public:
 	static void call(word addr);
 	static bool INT();
 
-	static void _GOCPM(boolean jmp);
+	static void _CPM(boolean jmp);
 	static void _BOOT();
 	static void _WBOOT();
 

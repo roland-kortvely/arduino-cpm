@@ -23,7 +23,7 @@ void LCD::scroll()
 void LCD::init()
 {
 	tft.begin(tft.readID());
-	tft.setRotation(3);						//LANDSCAPE
+	tft.setRotation(1);						//LANDSCAPE
 
 	height = tft.height();
 

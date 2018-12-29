@@ -1,0 +1,122 @@
+                ;FILE: PRLMOVE.ASM
+                ;FROM LIFELINES VOL II,NO 8
+                ;
+                ;ENTERED 3 DEC 84 RHP
+                ;
+                ;*******************************************************
+                ;PRL FILE FORMAT RELOCATER FOR BIT MAPPED FILES
+                ;*******************************************************
+                ;THIS SMALL PROGRAM BLOCK MOVES A BIT MAP RELOCATABLE 
+                ;FILE FROM ADDRESS 0200H ABOVE THIS MODULE UP TO A SPOT
+                ;BELOW THE CCP AND THEN JUMPS TO THE BASE OF THE MOVED
+                ;CODE. THE DIGITAL RESEARCH RELOCATING ASSEMBLER AND THE
+                ;COMPANION LINKER PERMIT THE GENERATION OF THE PRL FILE
+                ;FORMAT. LINK WILL PUT THE CODE SIZE WORD INTO ADDRESS
+                ;101 AND 102. THE CODE SPCT IS INTENDED TO BE 0200H WITH
+                ;THE BIT MAP IMMEDIATLY ABOVE THE CODE. A ONE IN THE 
+                ;BIT MAP INDICATES THE LOCATION OF A MOVED BYTE THAT
+                ;REQUIRES A RELOCGTION ADDRESS OFFSET.
+                ;*******************************************************
+                ;
+                ;START POINT FOR THE BEGINNING OF THE MOVER PROGRAM
+                ;
+ 0100           	ORG 	0100H
+                ;
+                ;GENERAL CPM BDOS EQUATES
+                ;
+ 0005 =         BDOS	EQU	0005H		;FILE MANAGER ENTRANCE LOC.
+ 0200 =         CODEST:	EQU	0200H		;LINK 80 CODE START POINT
+                				; FOR ORG 0 FILE
+                ;
+                ;START POINT OF MOVER CODE
+                ;
+ 0100 010000    START:	LXI	B,0000H		;LOAD CODE SIZE AT START+1
+ 0103 210000    	LXI	H,0000H		;GET CCP STACK FOR LATER
+ 0106 39        	DAD	SP		; PASSING TO RELOCATED PRGM
+ 0107 310002    	LXI	SP,CODEST	;STACK WORKS DOWN FROM CODE
+ 010A E5        	PUSH	H		;SAVE OLD STACK ON NEW STACK
+ 010B C5        	PUSH	B		;SAVE CODE SIZE ON NEW STACK
+                ;
+                ;GET BDOS PAGE ADDRESS BOUNDRY
+                ;
+ 010C 210700    	LXI	H,BDOS+2	;PAGE ADDRESS OF BDOS CODE
+ 010F 7E        	MOV	A,M		;INTO A
+ 0110 D608      	SUI	8		;DOWN 8 PAGES FOR CCP
+ 0112 3D        	DCR	A		;ONCE MORE FOR PAGE FRACTION
+ 0113 90        	SUB	B		;- CODE SIZE IN TRNC INT SIZE
+ 0114 57        	MOV	D,A		;DE=DESTINATION BASE
+ 0115 1E00      	MVI	E,0		
+ 0117 D5        	PUSH	D		;SAVE ADDR FOR JUMP TO CODE
+ 0118 210002    	LXI	H,CODEST	;START MOVE POINTER TO HL
+                ;
+                ;LOOP TO MOVE CODE UP IN RAM UNDER CCP
+                ;
+ 011B 78        MOVLOOP:MOV	A,B		;CHK BYTE CNT, ALL MOVED YET?
+ 011C B1        	ORA	C
+ 011D CA2801    	JZ	MOVDONE		;EXIT OP IF DONE
+ 0120 0B        	DCX	B		;DECR BYTES TO MOVE COUNT
+ 0121 7E        	MOV	A,M		;MOVE THE BYTE
+ 0122 12        	STAX	D		;PUT AT DEST ADDR
+ 0123 13        	INX	D		;NEXT DEST
+ 0124 23        	INX	H		;NEXT SOURCE
+ 0125 C31B01    	JMP	MOVLOOP		;KEEP ON TRUCKING
+                ;
+                ;CODE MOVED, NOW SCAN THE BIT MAP
+                ;
+ 0128 D1        MOVDONE:POP	D		;GET DEST ADDR
+ 0129 C1        	POP	B		;GET BYTE COUNT
+ 012A E5        	PUSH 	H 		;SAVE BIT MAP ADDR ON STACK
+ 012B 62        	MOV	H,D		;SET H TO RELOC PAGE OFFSET
+ 012C 25        	DCR	H
+                ;
+                ;LOOP TO SCAN CODE BLOCK JUST MOVED AND TO ADD IN OFFSET OF
+                ;EXECUTION PAGE ADDRESS ON ALL BYTES NEEDING RELOCATION.
+                ;
+                RELOCLOOP:
+ 012D 78        	MOV	A,B		;CHECK BIT CNTER,RELOC COMPL?
+ 012E B1        	ORA	C
+ 012F CA4B01    	JZ	RELOCDONE	;ALL BYTES DONE
+ 0132 0B        	DCX	B		;DEC BYTE COUNT
+ 0133 7B        	MOV	A,E		;IS DE ADDR MOD 8 BYTES?
+ 0134 E607      	ANI	07H		;IF SO,NEED NEXT BIT MAP BYTE
+ 0136 C23E01    	JNZ	SAMEBYTE	;STILL ON SAME BIT MAP BYTE
+                ;
+                ;GET NEXT BIT MAP BYTE VIA POINTER ON STACK
+                ;
+ 0139 E3        	XTHL			;SAVE HL & GET CURNT MAP PNTR
+ 013A 7E        	MOV	A,M		;MAP BYTE TO A
+ 013B 23        	INX	H		;BUMP POINTER FOR NEXT TIME
+ 013C E3        	XTHL			;REPLACE POINTER ON STACK
+ 013D 6F        	MOV	L,A		;MAP BYTE TO HOLDING REG.
+                ;
+                SAMEBYTE:
+ 013E 7D        	MOV	A,L		;GET CURRENT BIT MAP BYTE
+ 013F 17        	RAL			;SHIFT ONE BIT
+ 0140 6F        	MOV	L,A		;SAVE SHFTD BIT FOR NXT PASS
+ 0141 D24701    	JNC	NOOFFSET	;0=NO OFFSET NEEDED
+                ;
+                ;GET CODE BYTE AND ADD IN OFFSET IF MAP BIT WAS 1
+                ;
+ 0144 1A        	LDAX	D		;GET THE DEST BYTE
+ 0145 84        	ADD	H		;ADD THE OFFSET
+ 0146 12        	STAX	D		;PUT IT BACK
+                ;
+                NOOFFSET:
+ 0147 13        	INX	D		;BUMP THE MOVED CODE BYTE PTR
+ 0148 C32D01    	JMP	RELOCLOOP	;BACK FOR MORE BYTES
+                ;
+                ; THE RELOC IS DONE & READY TO JUMP TO THE MOVED CODE
+                ;H HAS PAGE ADDRESS OF THE MOVED CODE
+                ;
+                RELOCDONE:
+ 014B D1        	POP	D		;GET BIT MAP PNTR OFF STACK
+ 014C 54        	MOV	D,H
+ 014D 14        	INR	D		;SET UP EXECUTION ADDR
+ 014E 1E00      	MVI	E,0		;MAKE DE AN EVEN PAGE BOUNDRY
+ 0150 E1        	POP	H		;GET THE CCP STACK POINTER
+ 0151 F9        	SPHL			;RESET TO GO TO MOVED PROGRAM
+ 0152 EB        	XCHG			;GET TRANSFER ADDR FROM DE
+ 0153 E9        	PCHL			;JUMP TO THE NEW CODE
+                ;
+ 0154           END
+

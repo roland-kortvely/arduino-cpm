@@ -391,7 +391,7 @@ bool BIOS::INT() {
 	return false;
 }
 
-void BIOS::_GOCPM(boolean jmp) {
+void BIOS::_CPM(boolean jmp) {
 
 	//JMP TO WBOOT
 	MEM::_AB = JMP_BOOT;
@@ -450,7 +450,7 @@ void BIOS::_BOOT() {
 	MEM::_WR();					//select disk 0
 
 	//INITIALIZE AND GO TO CP/M
-	_GOCPM(true);
+	_CPM(true);
 }
 
 void BIOS::_WBOOT() {
@@ -469,7 +469,7 @@ void BIOS::_WBOOT() {
 	}
 
 	//INITIALIZE AND GO TO CP/M
-	_GOCPM(true);
+	_CPM(true);
 }
 
 void BIOS::_BIOS_BOOT() {
